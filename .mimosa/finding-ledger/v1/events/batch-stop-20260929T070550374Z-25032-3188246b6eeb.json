@@ -1,0 +1,713 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260929T070550374Z-25032-3188246b6eeb",
+  "runId": "20260929T070550374Z-25032-3188246b6eeb",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "bash_discovery_truncated",
+        "stage": "bash-discovery",
+        "target": "data/sessions/run-18283/workspace/homes/cli-zcode/.local/lib/python3.14/site-packages/cv2/load_config_py3.py",
+        "detail": "changed-file discovery exceeded 80 files",
+        "affectsCompletion": true
+      },
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/testUtils.test.js",
+        "detail": "60 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/AGENTS.md",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/CLAUDE.md",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/shell-snapshots/snapshot-zsh-1790651490905-mfkfz9.sh",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/bash-startup/sess_91d9f3f6-4a74-47ea-9652-a95f0b07815f/embedded-search-startup-0f0131c8f43b7f1f.sh",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/AGENTS.md",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/CLAUDE.md",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/package.json",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/gen-compile-commands.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/increment-version.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/post-install.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/prebuild.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/conpty_console_list_agent.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.test.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/index.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/interfaces.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.test.js",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "labs/nyu-ctf/run_challenge.py",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "labs/nyu-ctf/switch_line.py",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/shell-snapshots/snapshot-zsh-1790651490905-mfkfz9.sh",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/bash-startup/sess_91d9f3f6-4a74-47ea-9652-a95f0b07815f/embedded-search-startup-0f0131c8f43b7f1f.sh",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/gen-compile-commands.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/increment-version.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/post-install.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/prebuild.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/conpty_console_list_agent.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.test.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/index.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/interfaces.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.test.js",
+        "detail": "spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "stop_budget_exhausted",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "focused supply-chain check was not run before the gate budget",
+        "affectsCompletion": true
+      },
+      {
+        "code": "stop_budget_exhausted",
+        "stage": "agent-check",
+        "target": ".",
+        "detail": "focused agent configuration check was not run before the gate budget",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "bash-discovery",
+        "target": "data/sessions/run-18283/workspace/homes/cli-zcode/.local/lib/python3.14/site-packages/cv2/load_config_py3.py",
+        "detail": "bash_discovery_truncated: changed-file discovery exceeded 80 files",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/testUtils.test.js",
+        "detail": "candidate_limit_exceeded: 60 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/AGENTS.md",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/CLAUDE.md",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/shell-snapshots/snapshot-zsh-1790651490905-mfkfz9.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/bash-startup/sess_91d9f3f6-4a74-47ea-9652-a95f0b07815f/embedded-search-startup-0f0131c8f43b7f1f.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/AGENTS.md",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/CLAUDE.md",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/package.json",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/gen-compile-commands.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/increment-version.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/post-install.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/prebuild.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/conpty_console_list_agent.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.test.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/index.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/interfaces.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.test.js",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "labs/nyu-ctf/run_challenge.py",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "labs/nyu-ctf/switch_line.py",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/shell-snapshots/snapshot-zsh-1790651490905-mfkfz9.sh",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-2117/workspace/homes/cli-zcode/.zcode/cli/exec/bash-startup/sess_91d9f3f6-4a74-47ea-9652-a95f0b07815f/embedded-search-startup-0f0131c8f43b7f1f.sh",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/gen-compile-commands.js",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/increment-version.js",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "data/sessions/run-1987/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/post-install.js",
+        "detail": "scanner_failed: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "a41d2711e732807318e72e1c5011d9057e055ccdcb4dde94714e9552fd4cbfb6",
+  "rulesVersion": "unavailable",
+  "sessionHash": "936583621435027b71cd55a1f38c7dc92571c311b8375ddfbd25d708bbe05140",
+  "reportRef": ".mimosa/reports/task-review-sess_5e3d31ac-fdb4-4b4a-8bd2-4b6445406492-20260929T070550374Z-25032-3188246b6eeb.json",
+  "events": [
+    {
+      "eventId": "hook-2e3339821973cc177b4a46de5fb65d22",
+      "findingId": "mimosa-4394193727e690faae987508",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:16:30.499Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "3b8292b363db8f7163987cad214ca90e5c8df88a89a6cb6bc36af67dc3967f6d",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 22,
+      "endLine": 22,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "3b8292b363db8f7163987cad214ca90e5c8df88a89a6cb6bc36af67dc3967f6d"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-b97a48a0b0260d0121ebfae412ba7a73",
+      "findingId": "mimosa-01e2a01dd7f79f1686253221",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:16:30.499Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 59,
+      "endLine": 59,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-d9bac5523de7b8a14ae4ad99325612bb",
+      "findingId": "mimosa-01e2a01dd7f79f1686253221",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:09.256Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 62,
+      "endLine": 62,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0"
+      },
+      "sequence": 2
+    },
+    {
+      "eventId": "hook-308bc588b918d59d37eebddffd08392f",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:09.256Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 163,
+      "endLine": 163,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 3
+    },
+    {
+      "eventId": "hook-a23d5251dacaec6efc1bfc374e994204",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:09.256Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 173,
+      "endLine": 173,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 4
+    },
+    {
+      "eventId": "hook-67731ca3579d8b64210dc899e276280c",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:44.300Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 182,
+      "endLine": 182,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 5
+    },
+    {
+      "eventId": "hook-44bd0c5f2a598bf92b072b8bd80045e7",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:44.300Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 192,
+      "endLine": 192,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 6
+    },
+    {
+      "eventId": "hook-fbbc50e7c6c712bcd2fdcf6fb3807144",
+      "findingId": "mimosa-4394193727e690faae987508",
+      "type": "static_fix_verified",
+      "at": "2026-09-28T23:18:23.261Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "3b8292b363db8f7163987cad214ca90e5c8df88a89a6cb6bc36af67dc3967f6d",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 22,
+      "endLine": 22,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "3b8292b363db8f7163987cad214ca90e5c8df88a89a6cb6bc36af67dc3967f6d"
+      },
+      "sequence": 7
+    },
+    {
+      "eventId": "hook-dae516efd6b3f8d29d3a7413bf212d33",
+      "findingId": "mimosa-01e2a01dd7f79f1686253221",
+      "type": "static_fix_verified",
+      "at": "2026-09-28T23:18:23.261Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 62,
+      "endLine": 62,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0"
+      },
+      "sequence": 8
+    },
+    {
+      "eventId": "hook-6c654e6f748e7a0e88bc8c702e119ef8",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "static_fix_verified",
+      "at": "2026-09-28T23:18:23.261Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 192,
+      "endLine": 192,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 9
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-09-29T07:05:50.851Z"
+}

@@ -1,0 +1,372 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e4]
+  - generic [ref=e11]:
+    - link "跳到主对话" [ref=e12] [cursor=pointer]:
+      - /url: "#main-conversation"
+    - navigation "解题列表导航" [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e16]:
+          - text: 無敵
+          - emphasis [ref=e17]: Muteki
+        - button "＋ 新建解题" [ref=e18] [cursor=pointer]
+        - searchbox "搜索解题…" [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e22]: 进行中
+          - button "草稿 新解题" [ref=e24] [cursor=pointer]:
+            - generic "草稿" [ref=e25]
+            - generic [ref=e28]: 新解题
+          - generic [ref=e29]:
+            - generic [ref=e30]: 最近
+            - button "新建文件夹" [ref=e31] [cursor=pointer]
+          - generic [ref=e35]:
+            - button "已结束 no-pass-needed web 已结束 6 分钟前 更多操作" [ref=e36]:
+              - generic "已结束" [ref=e37]
+              - generic [ref=e41]:
+                - generic [ref=e42]: no-pass-needed
+                - generic [ref=e43]:
+                  - generic [ref=e44]: web
+                  - generic [ref=e45]: 已结束
+                  - generic "2026/9/29 20:21:37" [ref=e46]: 6 分钟前
+              - button "更多操作" [ref=e48] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 38 分钟前 更多操作" [ref=e53]:
+              - generic "已结束" [ref=e54]
+              - generic [ref=e58]:
+                - generic [ref=e59]: no-pass-needed
+                - generic [ref=e60]:
+                  - generic [ref=e61]: web
+                  - generic [ref=e62]: 已结束
+                  - generic "2026/9/29 19:49:51" [ref=e63]: 38 分钟前
+              - button "更多操作" [ref=e65] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 2 小时前 更多操作" [ref=e70]:
+              - generic "已结束" [ref=e71]
+              - generic [ref=e75]:
+                - generic [ref=e76]: no-pass-needed
+                - generic [ref=e77]:
+                  - generic [ref=e78]: web
+                  - generic [ref=e79]: 已结束
+                  - generic "2026/9/29 17:33:28" [ref=e80]: 2 小时前
+              - button "更多操作" [ref=e82] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 4 小时前 更多操作" [ref=e87]:
+              - generic "已结束" [ref=e88]
+              - generic [ref=e92]:
+                - generic [ref=e93]: no-pass-needed
+                - generic [ref=e94]:
+                  - generic [ref=e95]: web
+                  - generic [ref=e96]: 已结束
+                  - generic "2026/9/29 16:18:47" [ref=e97]: 4 小时前
+              - button "更多操作" [ref=e99] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 4 小时前 更多操作" [ref=e104]:
+              - generic "已结束" [ref=e105]
+              - generic [ref=e109]:
+                - generic [ref=e110]: no-pass-needed
+                - generic [ref=e111]:
+                  - generic [ref=e112]: web
+                  - generic [ref=e113]: 已结束
+                  - generic "2026/9/29 15:46:31" [ref=e114]: 4 小时前
+              - button "更多操作" [ref=e116] [cursor=pointer]
+            - button "已结束 1black0white forensics 已结束 5 小时前 更多操作" [ref=e121]:
+              - generic "已结束" [ref=e122]
+              - generic [ref=e126]:
+                - generic [ref=e127]: 1black0white
+                - generic [ref=e128]:
+                  - generic [ref=e129]: forensics
+                  - generic [ref=e130]: 已结束
+                  - generic "2026/9/29 14:55:07" [ref=e131]: 5 小时前
+              - button "更多操作" [ref=e133] [cursor=pointer]
+            - button "已解出 poem-collection web 已解出 5 小时前 更多操作" [ref=e138]:
+              - generic "已解出" [ref=e139]
+              - generic [ref=e142]:
+                - generic [ref=e143]: poem-collection
+                - generic [ref=e144]:
+                  - generic [ref=e145]: web
+                  - generic [ref=e146]: 已解出
+                  - generic "2026/9/29 14:39:57" [ref=e147]: 5 小时前
+              - button "更多操作" [ref=e149] [cursor=pointer]
+            - button "已结束 missed_registration forensics 已结束 5 小时前 更多操作" [ref=e154]:
+              - generic "已结束" [ref=e155]
+              - generic [ref=e159]:
+                - generic [ref=e160]: missed_registration
+                - generic [ref=e161]:
+                  - generic [ref=e162]: forensics
+                  - generic [ref=e163]: 已结束
+                  - generic "2026/9/29 14:36:45" [ref=e164]: 5 小时前
+              - button "更多操作" [ref=e166] [cursor=pointer]
+            - button "已结束 Crack-Me crypto 已结束 6 小时前 更多操作" [ref=e171]:
+              - generic "已结束" [ref=e172]
+              - generic [ref=e176]:
+                - generic [ref=e177]: Crack-Me
+                - generic [ref=e178]:
+                  - generic [ref=e179]: crypto
+                  - generic [ref=e180]: 已结束
+                  - generic "2026/9/29 14:21:33" [ref=e181]: 6 小时前
+              - button "更多操作" [ref=e183] [cursor=pointer]
+            - button "已结束 1black0white forensics 已结束 6 小时前 更多操作" [ref=e188]:
+              - generic "已结束" [ref=e189]
+              - generic [ref=e193]:
+                - generic [ref=e194]: 1black0white
+                - generic [ref=e195]:
+                  - generic [ref=e196]: forensics
+                  - generic [ref=e197]: 已结束
+                  - generic "2026/9/29 14:06:17" [ref=e198]: 6 小时前
+              - button "更多操作" [ref=e200] [cursor=pointer]
+            - button "已结束 missed_registration forensics 已结束 6 小时前 更多操作" [ref=e205]:
+              - generic "已结束" [ref=e206]
+              - generic [ref=e210]:
+                - generic [ref=e211]: missed_registration
+                - generic [ref=e212]:
+                  - generic [ref=e213]: forensics
+                  - generic [ref=e214]: 已结束
+                  - generic "2026/9/29 13:49:50" [ref=e215]: 6 小时前
+              - button "更多操作" [ref=e217] [cursor=pointer]
+            - button "已结束 Crack-Me crypto 已结束 6 小时前 更多操作" [ref=e222]:
+              - generic "已结束" [ref=e223]
+              - generic [ref=e227]:
+                - generic [ref=e228]: Crack-Me
+                - generic [ref=e229]:
+                  - generic [ref=e230]: crypto
+                  - generic [ref=e231]: 已结束
+                  - generic "2026/9/29 13:34:38" [ref=e232]: 6 小时前
+              - button "更多操作" [ref=e234] [cursor=pointer]
+            - button "已解出 1black0white forensics 已解出 7 小时前 更多操作" [ref=e239]:
+              - generic "已解出" [ref=e240]
+              - generic [ref=e243]:
+                - generic [ref=e244]: 1black0white
+                - generic [ref=e245]:
+                  - generic [ref=e246]: forensics
+                  - generic [ref=e247]: 已解出
+                  - generic "2026/9/29 13:19:25" [ref=e248]: 7 小时前
+              - button "更多操作" [ref=e250] [cursor=pointer]
+            - button "已解出 missed_registration forensics 已解出 7 小时前 更多操作" [ref=e255]:
+              - generic "已解出" [ref=e256]
+              - generic [ref=e259]:
+                - generic [ref=e260]: missed_registration
+                - generic [ref=e261]:
+                  - generic [ref=e262]: forensics
+                  - generic [ref=e263]: 已解出
+                  - generic "2026/9/29 13:12:23" [ref=e264]: 7 小时前
+              - button "更多操作" [ref=e266] [cursor=pointer]
+            - button "已结束 Crack-Me crypto 已结束 7 小时前 更多操作" [ref=e271]:
+              - generic "已结束" [ref=e272]
+              - generic [ref=e276]:
+                - generic [ref=e277]: Crack-Me
+                - generic [ref=e278]:
+                  - generic [ref=e279]: crypto
+                  - generic [ref=e280]: 已结束
+                  - generic "2026/9/29 12:59:35" [ref=e281]: 7 小时前
+              - button "更多操作" [ref=e283] [cursor=pointer]
+            - button "已结束 1black0white forensics 已结束 7 小时前 更多操作" [ref=e288]:
+              - generic "已结束" [ref=e289]
+              - generic [ref=e293]:
+                - generic [ref=e294]: 1black0white
+                - generic [ref=e295]:
+                  - generic [ref=e296]: forensics
+                  - generic [ref=e297]: 已结束
+                  - generic "2026/9/29 12:44:17" [ref=e298]: 7 小时前
+              - button "更多操作" [ref=e300] [cursor=pointer]
+            - button "已结束 picgram web 已结束 8 小时前 更多操作" [ref=e305]:
+              - generic "已结束" [ref=e306]
+              - generic [ref=e310]:
+                - generic [ref=e311]: picgram
+                - generic [ref=e312]:
+                  - generic [ref=e313]: web
+                  - generic [ref=e314]: 已结束
+                  - generic "2026/9/29 12:23:25" [ref=e315]: 8 小时前
+              - button "更多操作" [ref=e317] [cursor=pointer]
+            - button "已结束 picgram web 已结束 8 小时前 更多操作" [ref=e322]:
+              - generic "已结束" [ref=e323]
+              - generic [ref=e327]:
+                - generic [ref=e328]: picgram
+                - generic [ref=e329]:
+                  - generic [ref=e330]: web
+                  - generic [ref=e331]: 已结束
+                  - generic "2026/9/29 11:51:54" [ref=e332]: 8 小时前
+              - button "更多操作" [ref=e334] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 9 小时前 更多操作" [ref=e339]:
+              - generic "已结束" [ref=e340]
+              - generic [ref=e344]:
+                - generic [ref=e345]: no-pass-needed
+                - generic [ref=e346]:
+                  - generic [ref=e347]: web
+                  - generic [ref=e348]: 已结束
+                  - generic "2026/9/29 11:21:01" [ref=e349]: 9 小时前
+              - button "更多操作" [ref=e351] [cursor=pointer]
+            - button "已结束 picgram web 已结束 9 小时前 更多操作" [ref=e356]:
+              - generic "已结束" [ref=e357]
+              - generic [ref=e361]:
+                - generic [ref=e362]: picgram
+                - generic [ref=e363]:
+                  - generic [ref=e364]: web
+                  - generic [ref=e365]: 已结束
+                  - generic "2026/9/29 11:10:00" [ref=e366]: 9 小时前
+              - button "更多操作" [ref=e368] [cursor=pointer]
+            - button "已结束 gatekeeping web 已结束 9 小时前 更多操作" [ref=e373]:
+              - generic "已结束" [ref=e374]
+              - generic [ref=e378]:
+                - generic [ref=e379]: gatekeeping
+                - generic [ref=e380]:
+                  - generic [ref=e381]: web
+                  - generic [ref=e382]: 已结束
+                  - generic "2026/9/29 10:39:26" [ref=e383]: 9 小时前
+              - button "更多操作" [ref=e385] [cursor=pointer]
+            - button "已结束 gatekeeping web 已结束 10 小时前 更多操作" [ref=e390]:
+              - generic "已结束" [ref=e391]
+              - generic [ref=e395]:
+                - generic [ref=e396]: gatekeeping
+                - generic [ref=e397]:
+                  - generic [ref=e398]: web
+                  - generic [ref=e399]: 已结束
+                  - generic "2026/9/29 10:08:25" [ref=e400]: 10 小时前
+              - button "更多操作" [ref=e402] [cursor=pointer]
+            - button "已解出 poem-collection web 已解出 10 小时前 更多操作" [ref=e407]:
+              - generic "已解出" [ref=e408]
+              - generic [ref=e411]:
+                - generic [ref=e412]: poem-collection
+                - generic [ref=e413]:
+                  - generic [ref=e414]: web
+                  - generic [ref=e415]: 已解出
+                  - generic "2026/9/29 10:06:17" [ref=e416]: 10 小时前
+              - button "更多操作" [ref=e418] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 10 小时前 更多操作" [ref=e423]:
+              - generic "已结束" [ref=e424]
+              - generic [ref=e428]:
+                - generic [ref=e429]: no-pass-needed
+                - generic [ref=e430]:
+                  - generic [ref=e431]: web
+                  - generic [ref=e432]: 已结束
+                  - generic "2026/9/29 10:04:52" [ref=e433]: 10 小时前
+              - button "更多操作" [ref=e435] [cursor=pointer]
+            - button "已结束 gatekeeping web 已结束 10 小时前 更多操作" [ref=e440]:
+              - generic "已结束" [ref=e441]
+              - generic [ref=e445]:
+                - generic [ref=e446]: gatekeeping
+                - generic [ref=e447]:
+                  - generic [ref=e448]: web
+                  - generic [ref=e449]: 已结束
+                  - generic "2026/9/29 09:32:02" [ref=e450]: 10 小时前
+              - button "更多操作" [ref=e452] [cursor=pointer]
+            - button "已解出 poem-collection web 已解出 11 小时前 更多操作" [ref=e457]:
+              - generic "已解出" [ref=e458]
+              - generic [ref=e461]:
+                - generic [ref=e462]: poem-collection
+                - generic [ref=e463]:
+                  - generic [ref=e464]: web
+                  - generic [ref=e465]: 已解出
+                  - generic "2026/9/29 09:01:48" [ref=e466]: 11 小时前
+              - button "更多操作" [ref=e468] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 11 小时前 更多操作" [ref=e473]:
+              - generic "已结束" [ref=e474]
+              - generic [ref=e478]:
+                - generic [ref=e479]: no-pass-needed
+                - generic [ref=e480]:
+                  - generic [ref=e481]: web
+                  - generic [ref=e482]: 已结束
+                  - generic "2026/9/29 08:59:34" [ref=e483]: 11 小时前
+              - button "更多操作" [ref=e485] [cursor=pointer]
+            - button "已结束 gatekeeping web 已结束 12 小时前 更多操作" [ref=e490]:
+              - generic "已结束" [ref=e491]
+              - generic [ref=e495]:
+                - generic [ref=e496]: gatekeeping
+                - generic [ref=e497]:
+                  - generic [ref=e498]: web
+                  - generic [ref=e499]: 已结束
+                  - generic "2026/9/29 08:28:00" [ref=e500]: 12 小时前
+              - button "更多操作" [ref=e502] [cursor=pointer]
+            - button "已解出 poem-collection web 已解出 12 小时前 更多操作" [ref=e507]:
+              - generic "已解出" [ref=e508]
+              - generic [ref=e511]:
+                - generic [ref=e512]: poem-collection
+                - generic [ref=e513]:
+                  - generic [ref=e514]: web
+                  - generic [ref=e515]: 已解出
+                  - generic "2026/9/29 07:57:41" [ref=e516]: 12 小时前
+              - button "更多操作" [ref=e518] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 12 小时前 更多操作" [ref=e523]:
+              - generic "已结束" [ref=e524]
+              - generic [ref=e528]:
+                - generic [ref=e529]: no-pass-needed
+                - generic [ref=e530]:
+                  - generic [ref=e531]: web
+                  - generic [ref=e532]: 已结束
+                  - generic "2026/9/29 07:54:04" [ref=e533]: 12 小时前
+              - button "更多操作" [ref=e535] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 12 小时前 更多操作" [ref=e540]:
+              - generic "已结束" [ref=e541]
+              - generic [ref=e545]:
+                - generic [ref=e546]: no-pass-needed
+                - generic [ref=e547]:
+                  - generic [ref=e548]: web
+                  - generic [ref=e549]: 已结束
+                  - generic "2026/9/29 07:52:43" [ref=e550]: 12 小时前
+              - button "更多操作" [ref=e552] [cursor=pointer]
+            - button "已结束 no-pass-needed web 已结束 13 小时前 更多操作" [ref=e557]:
+              - generic "已结束" [ref=e558]
+              - generic [ref=e562]:
+                - generic [ref=e563]: no-pass-needed
+                - generic [ref=e564]:
+                  - generic [ref=e565]: web
+                  - generic [ref=e566]: 已结束
+                  - generic "2026/9/29 07:19:46" [ref=e567]: 13 小时前
+              - button "更多操作" [ref=e569] [cursor=pointer]
+        - generic [ref=e575]:
+          - generic [ref=e576]: 待命
+          - button "Worker 设置" [ref=e579] [cursor=pointer]
+      - separator "拖拽调整解题列表宽度" [ref=e583]
+    - main "主对话" [ref=e584]:
+      - generic [ref=e585]:
+        - status "运行状态播报" [ref=e586]
+        - generic [ref=e587]:
+          - button "切换解题列表" [ref=e588] [cursor=pointer]
+          - generic [ref=e591]: 新建解题
+          - generic "sessions/draft-mumnjw2q-fp0f" [ref=e592]
+          - button "顺嘴问 (Ctrl/Cmd+Shift+/)" [ref=e593] [cursor=pointer]: BTW
+          - button "2 个引擎可用" [ref=e595] [cursor=pointer]:
+            - generic [ref=e599]: "2"
+          - img "待命" [ref=e600]
+          - button "切换到亮色模式" [ref=e601] [cursor=pointer]
+          - button "Switch to English" [ref=e605] [cursor=pointer]: EN
+        - generic [ref=e607]:
+          - generic [ref=e609]:
+            - generic [ref=e610]:
+              - generic [ref=e611]:
+                - text: 無敵
+                - emphasis [ref=e612]: Muteki
+              - generic [ref=e613]: 描述题目或目标，开始解题。
+            - generic [ref=e614]: 选择模板
+            - generic [ref=e615]:
+              - button "Web SQL 注入获取 flag 填写 URL 与已知条件。" [ref=e616] [cursor=pointer]:
+                - generic [ref=e621]: Web
+                - generic [ref=e622]: SQL 注入获取 flag
+                - generic [ref=e623]: 填写 URL 与已知条件。
+              - button "Crypto 破解这段密文 粘贴密文，或添加附件。" [ref=e624] [cursor=pointer]:
+                - generic [ref=e629]: Crypto
+                - generic [ref=e630]: 破解这段密文
+                - generic [ref=e631]: 粘贴密文，或添加附件。
+              - button "Pentest 主机渗透测试 填写目标与授权范围。" [ref=e632] [cursor=pointer]:
+                - generic [ref=e638]: Pentest
+                - generic [ref=e639]: 主机渗透测试
+                - generic [ref=e640]: 填写目标与授权范围。
+          - generic [ref=e641]:
+            - generic [ref=e642]:
+              - tablist "模式" [ref=e644]:
+                - tab "CTF" [selected] [ref=e645] [cursor=pointer]
+                - tab "渗透" [ref=e646] [cursor=pointer]
+              - textbox "描述一道题 —— 粘贴题面、一个 URL，或附件说明。蜂群读取后会推断题目类别与目标，并决定派出几个解题器竞速。" [ref=e647]
+              - generic [ref=e648]:
+                - button "添加附件（也可粘贴或拖拽）" [ref=e649] [cursor=pointer]
+                - generic [ref=e652]:
+                  - generic [ref=e653]: ▸
+                  - text: 自动规划 —— 类别、目标与解题器数量由你的描述推断
+                - button "单 flag" [ref=e654] [cursor=pointer]
+                - button "Web 工具开" [pressed] [ref=e657] [cursor=pointer]
+                - button "容器" [disabled] [pressed] [ref=e661]
+                - button "高级" [ref=e665] [cursor=pointer]
+                - button "派发蜂群（⌘↵）" [disabled] [ref=e671]
+            - generic [ref=e674]:
+              - text: flag 只有能溯源到真实执行输出才算数 · ⌘↵ 派发
+              - generic "聚焦输入框" [ref=e675]:
+                - generic [ref=e676]: /
+                - text: 聚焦输入框
+              - generic "命令面板" [ref=e677]:
+                - generic [ref=e678]: ⌘K
+                - text: 命令面板
+    - status

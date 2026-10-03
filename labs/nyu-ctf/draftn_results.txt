@@ -1,0 +1,25 @@
+=== K=5: (re)start dual-GPU model ===
+### arm=K5-dual  model=qwen3.8-27b  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1128 tok | out 700 tok | prefill 565.1 t/s | decode 38.8 t/s | 25.77 ms/tok | ttft 1996.0 ms | wall 20.01s | finish=length
+  round 2: prompt 1128 tok | out 700 tok | prefill 582.9 t/s | decode 37.5 t/s | 26.69 ms/tok | ttft 1935.0 ms | wall 20.60s | finish=length
+  round 3: prompt 1127 tok | out 700 tok | prefill 543.4 t/s | decode 36.6 t/s | 27.33 ms/tok | ttft 2074.0 ms | wall 21.19s | finish=length
+--- MEDIAN ---
+  decode  = 37.5 t/s   (samples: [38.8, 37.5, 36.6])
+  prefill = 565.1 t/s   (samples: [565.1, 582.9, 543.4])
+
+=== K=6: (re)start dual-GPU model ===
+### arm=K6-dual  model=qwen3.8-27b  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1129 tok | out 700 tok | prefill 559.0 t/s | decode 36.6 t/s | 27.31 ms/tok | ttft 2020.0 ms | wall 21.11s | finish=length
+  round 2: prompt 1127 tok | out 700 tok | prefill 553.1 t/s | decode 35.9 t/s | 27.82 ms/tok | ttft 2037.0 ms | wall 21.49s | finish=length
+  round 3: prompt 1125 tok | out 700 tok | prefill 540.2 t/s | decode 36.9 t/s | 27.13 ms/tok | ttft 2082.0 ms | wall 21.05s | finish=length
+--- MEDIAN ---
+  decode  = 36.6 t/s   (samples: [36.6, 35.9, 36.9])
+  prefill = 553.1 t/s   (samples: [559.0, 553.1, 540.2])
+
+=== ALL DONE — medians ===
+### arm=K5-dual  model=qwen3.8-27b  max_tokens=700  rounds=3
+  decode  = 37.5 t/s   (samples: [38.8, 37.5, 36.6])
+### arm=K6-dual  model=qwen3.8-27b  max_tokens=700  rounds=3
+  decode  = 36.6 t/s   (samples: [36.6, 35.9, 36.9])

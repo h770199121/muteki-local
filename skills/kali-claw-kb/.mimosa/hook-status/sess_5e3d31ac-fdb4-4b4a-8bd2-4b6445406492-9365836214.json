@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-30T07:30:49.889Z",
+  "sessionId": "sess_5e3d31ac-fdb4-4b4a-8bd2-4b6445406492",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "D:\\AI\\muteki-local\\start.bat",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 7,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

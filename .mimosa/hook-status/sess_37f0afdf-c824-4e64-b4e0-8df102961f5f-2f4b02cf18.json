@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-10-03T05:05:10.367Z",
+  "sessionId": "sess_37f0afdf-c824-4e64-b4e0-8df102961f5f",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "C:/Users/75110/.zcode/cli/memories/projects/ai-02417cce07a7dd28/memory/muteki-local-ctf-pipeline.md",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 10,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

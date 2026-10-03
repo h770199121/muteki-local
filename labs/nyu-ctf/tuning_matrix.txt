@@ -1,0 +1,57 @@
+=== signal-single-K4 ===
+swiftmtp-dual-K4: FAILED TO START
+signal-single-K4: FAILED TO START
+signal-single-K4: FAILED TO START
+=== swiftmtp-dual-K3 ===
+### arm=swiftmtp-dual-K3  model=swift15-dual  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1167 tok | out 700 tok | prefill 531.1 t/s | decode 31.7 t/s | 31.55 ms/tok | ttft 2197.0 ms | wall 24.26s | finish=length
+  round 2: prompt 1165 tok | out 700 tok | prefill 527.4 t/s | decode 32.2 t/s | 31.05 ms/tok | ttft 2209.0 ms | wall 23.92s | finish=length
+  round 3: prompt 1165 tok | out 700 tok | prefill 525.1 t/s | decode 31.8 t/s | 31.48 ms/tok | ttft 2218.0 ms | wall 24.23s | finish=length
+--- MEDIAN ---
+  decode  = 31.8 t/s   (samples: [31.7, 32.2, 31.8])
+  prefill = 527.4 t/s   (samples: [531.1, 527.4, 525.1])
+
+=== swiftmtp-dual-K4 ===
+### arm=swiftmtp-dual-K4  model=swift15-dual  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1166 tok | out 700 tok | prefill 524.1 t/s | decode 32.7 t/s | 30.58 ms/tok | ttft 2225.0 ms | wall 23.61s | finish=length
+  round 2: prompt 1167 tok | out 700 tok | prefill 520.2 t/s | decode 34.4 t/s | 29.10 ms/tok | ttft 2243.0 ms | wall 22.59s | finish=length
+  round 3: prompt 1168 tok | out 700 tok | prefill 519.2 t/s | decode 34.0 t/s | 29.45 ms/tok | ttft 2249.0 ms | wall 22.84s | finish=length
+--- MEDIAN ---
+  decode  = 34.0 t/s   (samples: [32.7, 34.4, 34.0])
+  prefill = 520.2 t/s   (samples: [524.1, 520.2, 519.2])
+
+=== swiftmtp-dual-K5 ===
+### arm=swiftmtp-dual-K5  model=swift15-dual  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1165 tok | out 700 tok | prefill 515.8 t/s | decode 35.1 t/s | 28.47 ms/tok | ttft 2259.0 ms | wall 22.17s | finish=length
+  round 2: prompt 1163 tok | out 700 tok | prefill 514.8 t/s | decode 35.0 t/s | 28.55 ms/tok | ttft 2259.0 ms | wall 22.22s | finish=length
+  round 3: prompt 1168 tok | out 700 tok | prefill 516.3 t/s | decode 24.9 t/s | 40.09 ms/tok | ttft 2262.0 ms | wall 30.29s | finish=length
+--- MEDIAN ---
+  decode  = 35.0 t/s   (samples: [35.1, 35.0, 24.9])
+  prefill = 515.8 t/s   (samples: [515.8, 514.8, 516.3])
+
+=== basemtp-dual-K4 ===
+### arm=basemtp-dual-K4  model=base-dual  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1167 tok | out 700 tok | prefill 520.1 t/s | decode 22.2 t/s | 44.96 ms/tok | ttft 2244.0 ms | wall 33.68s | finish=length
+  round 2: prompt 1167 tok | out 700 tok | prefill 515.9 t/s | decode 33.9 t/s | 29.48 ms/tok | ttft 2262.0 ms | wall 22.88s | finish=length
+  round 3: prompt 1163 tok | out 700 tok | prefill 505.8 t/s | decode 33.1 t/s | 30.19 ms/tok | ttft 2299.0 ms | wall 23.41s | finish=length
+--- MEDIAN ---
+  decode  = 33.1 t/s   (samples: [22.2, 33.9, 33.1])
+  prefill = 515.9 t/s   (samples: [520.1, 515.9, 505.8])
+
+=== bonsai-dual-none ===
+bonsai-dual-none: FAILED TO START
+=== occamy-dual-none ===
+### arm=occamy-dual-none  model=occamy-dual  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1165 tok | out 700 tok | prefill 1591.0 t/s | decode 60.2 t/s | 16.62 ms/tok | ttft 732.0 ms | wall 12.35s | finish=length
+  round 2: prompt 1166 tok | out 700 tok | prefill 1603.9 t/s | decode 60.2 t/s | 16.62 ms/tok | ttft 727.0 ms | wall 12.35s | finish=length
+  round 3: prompt 1168 tok | out 700 tok | prefill 1552.7 t/s | decode 60.1 t/s | 16.63 ms/tok | ttft 752.0 ms | wall 12.39s | finish=length
+--- MEDIAN ---
+  decode  = 60.2 t/s   (samples: [60.2, 60.2, 60.1])
+  prefill = 1591.0 t/s   (samples: [1591.0, 1603.9, 1552.7])
+
+=== MATRIX DONE ===

@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "aliases": {
+    "登录": [
+      "login",
+      "authentication"
+    ],
+    "认证": [
+      "authentication",
+      "auth"
+    ],
+    "过滤": [
+      "filter",
+      "sanitization"
+    ],
+    "回显": [
+      "echo",
+      "reflected"
+    ],
+    "绕过": [
+      "bypass"
+    ],
+    "注入": [
+      "injection",
+      "sqli"
+    ],
+    "会话保持": [
+      "session cookie jar",
+      "session persistence"
+    ],
+    "会话": [
+      "session"
+    ],
+    "保持": [
+      "persistence",
+      "persistent"
+    ],
+    "重定向": [
+      "redirect"
+    ],
+    "解码": [
+      "decode",
+      "decoding"
+    ],
+    "编码": [
+      "encoding",
+      "base64"
+    ],
+    "文件包含": [
+      "file inclusion",
+      "lfi"
+    ],
+    "反序列化": [
+      "deserialization"
+    ],
+    "反编译": [
+      "decompile",
+      "decompilation"
+    ],
+    "逆向": [
+      "reverse",
+      "decompile"
+    ],
+    "隐写": [
+      "steganography",
+      "stego"
+    ],
+    "二维码": [
+      "qr"
+    ],
+    "抓包": [
+      "pcap",
+      "packet"
+    ],
+    "流量": [
+      "traffic",
+      "pcap"
+    ],
+    "重组": [
+      "reassembly",
+      "reassemble"
+    ],
+    "密码学": [
+      "crypto",
+      "cryptography"
+    ],
+    "公钥": [
+      "public key",
+      "rsa"
+    ],
+    "随机数": [
+      "prng",
+      "random"
+    ],
+    "溢出": [
+      "overflow"
+    ],
+    "栈": [
+      "stack"
+    ],
+    "堆": [
+      "heap"
+    ],
+    "取证": [
+      "forensics",
+      "forensic"
+    ],
+    "内存": [
+      "memory"
+    ],
+    "工具": [
+      "tool",
+      "toolchain"
+    ],
+    "sqli": [
+      "sqli",
+      "sql injection"
+    ],
+    "lfi": [
+      "lfi",
+      "file inclusion"
+    ],
+    "cookie jar": [
+      "cookie jar",
+      "session persistence"
+    ],
+    "vol3": [
+      "volatility",
+      "vol"
+    ],
+    "ghidra": [
+      "ghidra",
+      "analyzeHeadless"
+    ]
+  }
+}

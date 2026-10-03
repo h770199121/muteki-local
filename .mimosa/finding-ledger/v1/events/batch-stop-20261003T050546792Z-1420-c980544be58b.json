@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261003T050546792Z-1420-c980544be58b",
+  "runId": "20261003T050546792Z-1420-c980544be58b",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": null,
+  "diffHash": "7b4616fe03e8effb4c255f942896a7e6df4041ad6ffa45335eb7765af6680056",
+  "rulesVersion": "unavailable",
+  "sessionHash": "2f4b02cf18cfd39f8aaf9d3a00fabcedb51e2bda4f7b05c2a31fa655ac7a7003",
+  "reportRef": ".mimosa/reports/task-review-sess_37f0afdf-c824-4e64-b4e0-8df102961f5f-20261003T050546792Z-1420-c980544be58b.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "apps/web/drivers.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "apps/web/control_adapter.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "muteki/swarm/coordinator_loop.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "muteki/swarm/coordinator_flags.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-10-03T05:05:47.304Z"
+}

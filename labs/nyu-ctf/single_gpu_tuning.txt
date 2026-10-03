@@ -1,0 +1,18 @@
+=== signal-single-full-K4 ===
+### arm=signal-single-full-K4  model=signal-full  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1163 tok | out 700 tok | prefill 6.5 t/s | decode 3.5 t/s | 282.26 ms/tok | ttft 179068.0 ms | wall 376.38s | finish=length
+  round 2: prompt 1170 tok | out 700 tok | prefill 5.8 t/s | decode 3.7 t/s | 268.99 ms/tok | ttft 200158.0 ms | wall 388.19s | finish=length
+  round 3: prompt 1167 tok | out 700 tok | prefill 6.6 t/s | decode 3.5 t/s | 288.31 ms/tok | ttft 176668.0 ms | wall 378.20s | finish=length
+--- MEDIAN ---
+  decode  = 3.5 t/s   (samples: [3.5, 3.7, 3.5])
+  prefill = 6.5 t/s   (samples: [6.5, 5.8, 6.6])
+
+=== swift-single-full-K5 ===
+swift-single-full-K5: FAILED TO START (waited 450s)
+=== occamy-single-full ===
+### arm=occamy-single-full  model=occamy-full  max_tokens=700  rounds=3
+### warmup (dropped)...
+WARMUP FAILED: ConnectionResetError(10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None)
+
+=== ARMS DONE ===

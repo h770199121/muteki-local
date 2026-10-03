@@ -1,0 +1,57 @@
+### Part 1: content-type K re-scan
+### K2-code ctype=code max_tokens=700 rounds=3
+  round 1: decode 31.5 t/s | prefill 402.8 t/s | out 105 | wall 3.69s
+  round 2: decode 31.6 t/s | prefill 370.7 t/s | out 105 | wall 3.73s
+  round 3: decode 31.5 t/s | prefill 416.3 t/s | out 105 | wall 3.68s
+--- MEDIAN decode=31.5 t/s  prefill=402.8 t/s ---
+### K2-zh ctype=zh max_tokens=700 rounds=3
+  round 1: decode 31.2 t/s | prefill 403.1 t/s | out 101 | wall 3.59s
+  round 2: decode 31.1 t/s | prefill 417.0 t/s | out 101 | wall 3.6s
+  round 3: decode 31.1 t/s | prefill 411.8 t/s | out 101 | wall 3.6s
+--- MEDIAN decode=31.1 t/s  prefill=411.8 t/s ---
+### K3-code ctype=code max_tokens=700 rounds=3
+  round 1: decode 35.6 t/s | prefill 409.4 t/s | out 105 | wall 3.31s
+  round 2: decode 35.5 t/s | prefill 412.5 t/s | out 105 | wall 3.32s
+  round 3: decode 35.5 t/s | prefill 411.8 t/s | out 105 | wall 3.32s
+--- MEDIAN decode=35.5 t/s  prefill=411.8 t/s ---
+### K3-zh ctype=zh max_tokens=700 rounds=3
+  round 1: decode 35.5 t/s | prefill 398.9 t/s | out 101 | wall 3.2s
+  round 2: decode 34.3 t/s | prefill 395.1 t/s | out 101 | wall 3.31s
+  round 3: decode 34.2 t/s | prefill 394.4 t/s | out 101 | wall 3.31s
+--- MEDIAN decode=34.3 t/s  prefill=395.1 t/s ---
+### K4-code ctype=code max_tokens=700 rounds=3
+  round 1: decode 38.4 t/s | prefill 367.7 t/s | out 105 | wall 3.15s
+  round 2: decode 38.4 t/s | prefill 406.6 t/s | out 105 | wall 3.1s
+  round 3: decode 38.4 t/s | prefill 414.5 t/s | out 105 | wall 3.1s
+--- MEDIAN decode=38.4 t/s  prefill=406.6 t/s ---
+### K4-zh ctype=zh max_tokens=700 rounds=3
+  round 1: decode 36.8 t/s | prefill 412.5 t/s | out 101 | wall 3.1s
+  round 2: decode 37.0 t/s | prefill 396.2 t/s | out 101 | wall 3.09s
+  round 3: decode 37.0 t/s | prefill 395.3 t/s | out 101 | wall 3.1s
+--- MEDIAN decode=37.0 t/s  prefill=396.2 t/s ---
+### Part 2: --spec-draft-p-min sweep (K4, en)
+### arm=K4-pmin0  model=qwen3.8-27b  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1123 tok | out 700 tok | prefill 616.0 t/s | decode 38.5 t/s | 25.96 ms/tok | ttft 1823.0 ms | wall 19.97s | finish=length
+  round 2: prompt 1128 tok | out 700 tok | prefill 613.1 t/s | decode 38.4 t/s | 26.02 ms/tok | ttft 1840.0 ms | wall 20.03s | finish=length
+  round 3: prompt 1126 tok | out 700 tok | prefill 612.1 t/s | decode 38.4 t/s | 26.07 ms/tok | ttft 1840.0 ms | wall 20.07s | finish=length
+--- MEDIAN ---
+  decode  = 38.4 t/s   (samples: [38.5, 38.4, 38.4])
+  prefill = 613.1 t/s   (samples: [616.0, 613.1, 612.1])
+### arm=K4-pmin0.2  model=qwen3.8-27b  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1127 tok | out 700 tok | prefill 608.1 t/s | decode 38.3 t/s | 26.11 ms/tok | ttft 1853.0 ms | wall 20.12s | finish=length
+  round 2: prompt 1120 tok | out 700 tok | prefill 606.6 t/s | decode 38.3 t/s | 26.14 ms/tok | ttft 1846.0 ms | wall 20.13s | finish=length
+  round 3: prompt 1128 tok | out 700 tok | prefill 609.1 t/s | decode 38.2 t/s | 26.18 ms/tok | ttft 1852.0 ms | wall 20.16s | finish=length
+--- MEDIAN ---
+  decode  = 38.3 t/s   (samples: [38.3, 38.3, 38.2])
+  prefill = 608.1 t/s   (samples: [608.1, 606.6, 609.1])
+### arm=K4-pmin0.4  model=qwen3.8-27b  max_tokens=700  rounds=3
+### warmup (dropped)...
+  round 1: prompt 1126 tok | out 700 tok | prefill 605.7 t/s | decode 38.1 t/s | 26.24 ms/tok | ttft 1859.0 ms | wall 20.21s | finish=length
+  round 2: prompt 1125 tok | out 700 tok | prefill 602.7 t/s | decode 38.1 t/s | 26.24 ms/tok | ttft 1867.0 ms | wall 20.22s | finish=length
+  round 3: prompt 1124 tok | out 700 tok | prefill 601.2 t/s | decode 38.1 t/s | 26.27 ms/tok | ttft 1869.0 ms | wall 20.24s | finish=length
+--- MEDIAN ---
+  decode  = 38.1 t/s   (samples: [38.1, 38.1, 38.1])
+  prefill = 602.7 t/s   (samples: [605.7, 602.7, 601.2])
+### ROUND2 DONE ===

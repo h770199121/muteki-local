@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260929T093547140Z-20592-c26cc5cf118b",
+  "runStatus": "inconclusive",
+  "errors": [
+    "bash-discovery:data/sessions/run-18653/workspace/homes/cli-dsh/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.js: bash_discovery_truncated: changed-file discovery exceeded 80 files",
+    "candidate-select:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/windowsPtyAgent.js: candidate_limit_exceeded: 60 changed reviewable file(s) were not scanned because the limit is 20",
+    "baseline-read:data/sessions/run-18653/workspace/AGENTS.md: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/CLAUDE.md: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/package.json: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/gen-compile-commands.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/increment-version.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/post-install.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/scripts/prebuild.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/conpty_console_list_agent.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/eventEmitter2.test.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/index.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/interfaces.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/terminal.test.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/testUtils.test.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/types.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/unixTerminal.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/unixTerminal.test.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/utils.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:data/sessions/run-18653/workspace/homes/cli-dsh-4/.cache/pkg/aca1266f08291aae3a0c678e7bfcbd83fe6a685da76416881ff8e82374049206/node-pty/lib/windowsConoutConnection.js: baseline_snapshot_unreadable: file is missing from task baseline",
+    "supply-chain-check:.: spawnSync C:\\Users\\75110\\AppData\\Local\\Programs\\nodejs\\node.exe ETIMEDOUT",
+    "agent-check:.: stop_budget_exhausted: focused agent configuration check was not run before the gate budget"
+  ],
+  "target": ".",
+  "revision": null,
+  "diffHash": "f3e777f0e164a973f6c392b9f06e10765af79f29016f22fd60d0acb38e74a621",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-09-29T09:35:47.140Z",
+  "timing": {
+    "startedAt": "2026-09-29T09:35:44.537Z",
+    "completedAt": "2026-09-29T09:35:47.140Z",
+    "durationMs": 2603
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 4,
+    "bySeverity": {
+      "high": 4
+    },
+    "byStatus": {
+      "blocked": 2,
+      "candidate": 2
+    }
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "bash_discovery_truncated": 1,
+      "candidate_limit_exceeded": 1,
+      "baseline_snapshot_unreadable": 20,
+      "stop_budget_exhausted": 1,
+      "project_check_failed": 24
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_5e3d31ac-fdb4-4b4a-8bd2-4b6445406492-20260929T093547140Z-20592-c26cc5cf118b.json"
+}

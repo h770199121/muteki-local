@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "pretooluse-64e25d599e39669004037e8e0223c0fa",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PreToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "936583621435027b71cd55a1f38c7dc92571c311b8375ddfbd25d708bbe05140",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-d9bac5523de7b8a14ae4ad99325612bb",
+      "findingId": "mimosa-01e2a01dd7f79f1686253221",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:09.256Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 62,
+      "endLine": 62,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "1387f96a0d3bc4b50e406f7f5766edb01d0d9afaccbf9cc696881b78293ec8f0"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-308bc588b918d59d37eebddffd08392f",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:09.256Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 163,
+      "endLine": 163,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-a23d5251dacaec6efc1bfc374e994204",
+      "findingId": "mimosa-8c8d74abd4eee1b727a3a451",
+      "type": "finding_blocked",
+      "at": "2026-09-28T23:17:09.256Z",
+      "identity": {
+        "projectRelativeFile": "labs/nyu-ctf/run_challenge.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 173,
+      "endLine": 173,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "2bb1e03ca18efb82d48509814d1f5f79621214e30ecac3e5180d28ce3602afc6"
+      },
+      "sequence": 2
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-09-28T23:17:09.749Z"
+}
