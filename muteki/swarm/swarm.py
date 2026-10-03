@@ -575,6 +575,16 @@ class Swarm(
         # D07: effective container resource limits for this run. "unlimited" values
         # are recorded explicitly so a later OOM is distinguishable from a cap.
         self._worker_resource_limits: dict[str, Any] = {}
+        # D04: consecutive pre-start dispatch-failure governor. Only a real
+        # process-start receipt clears the streak; runtime failures are owned by the
+        # fruitless-interrupt path and are not counted here.
+        from muteki.swarm.dispatch_failure_governor import (
+            FailureGovernor,
+            resolve_failure_limit,
+        )
+        self._dispatch_failure_governor = FailureGovernor(
+            limit=resolve_failure_limit())
+        self._dispatch_failure_limit_reached = False
         self._agent_state_dirs: set[Path] = set()
         # engines dropped from the roster by a dispatch-time health-check failure
         # (e.g. cursor headless auth lapsed). engine -> reason. Used to dedup the

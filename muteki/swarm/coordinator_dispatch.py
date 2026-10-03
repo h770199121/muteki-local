@@ -63,6 +63,66 @@ from muteki.swarm.swarm_support import (
 
 
 class _DispatchReasonMixin:
+    async def _note_worker_dispatch_failure(self, fields: dict) -> None:
+        """D04: count one pre-start dispatch rejection and stop when the streak is fatal.
+
+        A real process-start receipt — not the mere creation of a task — clears the
+        streak, so a worker that spawns and dies immediately does not keep the counter
+        alive on an otherwise healthy system.
+        """
+        from muteki.swarm.dispatch_failure_governor import (
+            summarize_active_solvers,
+            worker_is_prestart,
+        )
+
+        governor = getattr(self, "_dispatch_failure_governor", None)
+        if governor is None or not governor.enabled:
+            return
+        if getattr(self, "_dispatch_failure_limit_reached", False):
+            return
+
+        # A worker that actually started proves the configuration works. The live
+        # solver registry (_live_solvers) is the real source of start receipts.
+        solvers = [s for s in list(getattr(self, "_live_solvers", {}).values())
+                   if s is not None]
+        for solver in solvers:
+            if not worker_is_prestart(solver):
+                previous = governor.record_start_observed(
+                    str(getattr(solver, "solver_id", "") or ""))
+                if previous:
+                    try:
+                        await self._emit_coord_bb(
+                            "worker_dispatch_recovered",
+                            worker=str(getattr(solver, "solver_id", "") or ""),
+                            previous_consecutive_failures=previous)
+                    except Exception:
+                        pass
+                break
+
+        reason = str(fields.get("reason") or fields.get("code") or "")
+        engine = str(fields.get("engine") or "")
+        detail = reason or "worker spawn rejected"
+        reached = governor.record_failure(
+            worker="", engine=engine, detail=detail, reason=reason)
+        if not reached:
+            return
+
+        # Fatal: stop re-dispatching and name the real cause rather than a bare count.
+        self._dispatch_failure_limit_reached = True
+        payload = governor.to_dict()
+        payload["active_solvers"] = summarize_active_solvers(solvers)
+        for solver in solvers:
+            cancel = getattr(self, "_cancel_solver", None)
+            if callable(cancel):
+                try:
+                    cancel(solver)
+                except Exception:
+                    pass
+        try:
+            await self._emit_coord_bb("worker_dispatch_failure_limit", **payload)
+        except Exception:
+            pass
+
     async def _apply_worker_cmds(
         self,
         *,
@@ -108,6 +168,15 @@ class _DispatchReasonMixin:
             _finish_queue_item(cmd)
 
         async def _report(kind: str, **fields: Any) -> None:
+            # D04: a pre-start rejection feeds the consecutive-failure governor so a
+            # broken configuration stops being re-dispatched until the wall clock runs
+            # out. Runtime failures are deliberately NOT counted here — they belong to
+            # the fruitless-interrupt / reflection path.
+            if kind == "worker_spawn_rejected":
+                try:
+                    await self._note_worker_dispatch_failure(fields)
+                except Exception:
+                    pass
             try:
                 await emit_bb(kind, **fields)
             except Exception:
