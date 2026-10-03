@@ -73,6 +73,51 @@ CHALLENGES = {
         "description": "A PHP page prints its own source: $what=$_GET['what']; echo $what; if($what=='flag') echo 'flag{****}'. Trigger the hidden branch and get the real flag.",
         "flag": "flag{9d9ad06bbf7b0607f930eaaae3bf234b}",
     },
+    # BUUCTF easy-web set (CTF² practice instances, 1 per challenge at a time).
+    # Targets are per-instance; flag left empty on purpose — verdict comes from
+    # the platform submission (external), never from these entries.
+    "be1_easysql": {
+        "remote": True, "container": "", "image": "",
+        "name": "[GeekChallenge 2019] EasySQL", "target": "http://02bcb75f3d9ce4210b821c40.http-ctf2.dasctf.com/",
+        "description": "A website login page (username/password form). Log in and find the flag.",
+        "flag": "",
+    },
+    "be2_include": {
+        "remote": True, "container": "", "image": "",
+        "name": "[ACTF2020 Freshman] Include", "target": "http://fbf23926ed757e8eff95af28.http-ctf2.dasctf.com/",
+        "description": "A PHP page with a ?file= parameter that includes local files. Find the flag.",
+        "flag": "",
+    },
+    "be3_exec": {
+        "remote": True, "container": "", "image": "",
+        "name": "[ACTF2020 Freshman] Exec", "target": "http://3519878fd084806ef320c0e2.http-ctf2.dasctf.com/",
+        "description": "A web page offering a command/ping execution box. Find the flag.",
+        "flag": "",
+    },
+    "be4_havefun": {
+        "remote": True, "container": "", "image": "",
+        "name": "[GeekChallenge 2019] Havefun", "target": "http://6890053a55164a0e8117f4fb.http-ctf2.dasctf.com/",
+        "description": "A PHP page with a cat picture. Find the flag.",
+        "flag": "",
+    },
+    "be5_lovesql": {
+        "remote": True, "container": "", "image": "",
+        "name": "[GeekChallenge 2019] LoveSQL", "target": "http://4b45949445762ae3f4de3665.http-ctf2.dasctf.com/",
+        "description": "A website login page (username/password form). Log in and find the flag.",
+        "flag": "",
+    },
+    "be6_backupfile": {
+        "remote": True, "container": "", "image": "",
+        "name": "[ACTF2020 Freshman] BackupFile", "target": "http://65dd4b97ea59de27188ff845.http-ctf2.dasctf.com/",
+        "description": "A PHP website. Find the flag.",
+        "flag": "",
+    },
+    "be7_knife": {
+        "remote": True, "container": "", "image": "",
+        "name": "[GeekChallenge 2019] Knife", "target": "http://27015201e3900779f8c960a7.http-ctf2.dasctf.com/",
+        "description": "A PHP site whose page hints at a backdoor ('Knife'). Find the flag.",
+        "flag": "",
+    },
 }
 
 # File-based challenges: handouts live under labs/nyu-ctf/challenges/<key>/ on the
@@ -199,6 +244,20 @@ KB_HINT = (
 )
 
 
+def _gate_solved(events: list[dict]) -> bool:
+    """The coordinator's own gate verdict for runs without a known official flag
+    (BUUCTF practice instances): RUN_FINISHED.solved is only set true after the
+    Flag gate accepted a real worker-produced flag. Used as `solved OR gate`
+    so flag-less entries don't report false negatives; the official-flag
+    comparison (external/evaluator) stays the authority whenever available.
+    """
+    return any(
+        (e.get("payload") or {}).get("solved") is True
+        for e in events
+        if (e.get("event_type") or "") in ("run.finished", "RUN_FINISHED")
+    )
+
+
 def run_static(ch: dict, args, password: str) -> int:
     """File-based challenge: no target container; handouts attached by path."""
     t0 = time.time()
@@ -250,11 +309,14 @@ def run_static(ch: dict, args, password: str) -> int:
     # A02: a solved verdict must trace to real accepted execution, not to the flag
     # string merely appearing in text (challenge text, a hint, or a guess).
     verdict = evaluate_attempt(events, expected_flags=ch["flag"])
+    gate_solved = _gate_solved(events)
     tool_calls = sum(1 for e in events
                      if (e.get("event_type") or "") in ("tool.start", "tool_start"))
     result = {
         "tag": args.tag, "engine": args.engine, "challenge": args.challenge,
-        "run_id": run_id, "finished": finished, "solved": verdict.solved,
+        "run_id": run_id, "finished": finished,
+        "solved": verdict.solved or gate_solved,
+        "gate_solved": gate_solved,
         "elapsed_s": round(elapsed, 1), "wall_budget_s": args.budget,
         "tool_calls": tool_calls,
         "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
@@ -350,11 +412,14 @@ def main() -> int:
         # A01/A02: same reduction and evidence-based verdict as the single-run path.
         usage = reduce_usage(events)
         verdict = evaluate_attempt(events, expected_flags=ch["flag"])
+        gate_solved = _gate_solved(events)
         tool_calls = sum(1 for e in events
                          if (e.get("event_type") or "") in ("tool.start", "tool_start"))
         result = {
             "tag": args.tag, "engine": args.engine, "challenge": args.challenge,
-            "run_id": run_id, "finished": finished, "solved": verdict.solved,
+            "run_id": run_id, "finished": finished,
+            "solved": verdict.solved or gate_solved,
+            "gate_solved": gate_solved,
             "elapsed_s": round(elapsed, 1), "wall_budget_s": args.budget,
             "tool_calls": tool_calls,
             "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,

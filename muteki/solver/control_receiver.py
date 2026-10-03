@@ -491,6 +491,15 @@ class ControlReceiver:
             conn.sendall((json.dumps({"ok": False, "error": error}) + "\n").encode())
         except OSError:
             pass
+        # Diagnostic for bootstrap auth failures (run-20671/20676/20681: token was
+        # readable yet the Hello still failed — needs receiver-side evidence).
+        import sys as _sys
+        print(
+            f"[rcp] hello REJECTED run_id={run_id!r} error={error!r} "
+            f"token_prefix={token[:8]!r} expected_prefix={(expected or '')[:8]!r} "
+            f"token_len={len(token)} expected_len={len(expected or '')} "
+            f"live={bool(live)} pending_tokens={len(self._tokens)}",
+            file=_sys.stderr, flush=True)
         conn.close()
 
     # ── API for ensure_container / worker threads ─────────────────────────────

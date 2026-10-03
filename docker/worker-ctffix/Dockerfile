@@ -20,4 +20,7 @@ RUN set -eux; \
     ln -sf /usr/share/ghidra/support/analyzeHeadless /usr/local/bin/analyzeHeadless; \
     ln -sf /usr/local/bin/vol /usr/local/bin/vol3; \
     rm -rf /var/lib/apt/lists/*
-USER kali
+# NOTE: keep the upstream default USER root. The runtime-agent ENTRYPOINT runs as
+# this user and forks workers with a Credential{} drop to kali; starting it as
+# kali makes Go's implicit setgroups() fail with EPERM → every StartWorker dies
+# with "fork/exec /usr/bin/python3: operation not permitted" (run-20686).

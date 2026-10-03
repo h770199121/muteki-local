@@ -1759,6 +1759,7 @@ class _RaceHealthMixin:
         OOMs, so the effective values (including "unlimited", and any value that was
         configured but rejected) are recorded once per run at container creation.
         """
+        from muteki.solver.worker_resources import describe_limits
         summary = describe_limits(limits)
         self._worker_resource_limits = dict(limits.to_dict())
         try:

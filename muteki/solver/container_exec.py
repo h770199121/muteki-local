@@ -671,20 +671,35 @@ def ensure_container(run_id: str, host_workspace: str, *,
             _cleanup_bootstrap_dir(run_id, fallback=control_dir)
             bootstrap_root = os.path.dirname(control_dir)
             os.makedirs(bootstrap_root, mode=0o700, exist_ok=True)
-            os.chmod(bootstrap_root, 0o700)
-            os.mkdir(control_dir, mode=0o700)
-            os.chmod(control_dir, 0o700)
+            # NOTE: when the data root lives on a Windows bind mount (Docker
+            # Desktop gRPC-FUSE), a 0700/0600 mode is enforced against EVERY
+            # accessor including container root after a Desktop restart — the
+            # supervisor then fails with "open token: permission denied"
+            # (run-20671/20676/20681). The token is one-shot and consumed at the
+            # first Hello, the receiver gates every link by it, and the port is
+            # compose-internal — so readable-by-all metadata on the host mount
+            # keeps the same practical boundary.
+            os.chmod(bootstrap_root, 0o755)
+            # 0777 (not 0755): the supervisor (uid kali) must be able to UNLINK the
+            # token after reading it — on an unlink failure it deliberately sends an
+            # empty-token Hello rather than reuse a token it cannot consume, and the
+            # receiver rejects it (run-20682/20683). Windows bind mounts ignore
+            # chown, so mode bits are the only lever.
+            os.mkdir(control_dir, mode=0o777)
+            os.chmod(control_dir, 0o777)
             try:
                 _BOOTSTRAP_DIRS[run_id] = control_dir
                 token = secrets.token_hex(32)
                 token_path = os.path.join(control_dir, "token")
-                fd = os.open(token_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                fd = os.open(token_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
                 try:
                     payload = token.encode("ascii")
                     if os.write(fd, payload) != len(payload):
                         raise OSError("short write creating RCP bootstrap token")
                 finally:
                     os.close(fd)
+                _verify_bootstrap_token_visible(
+                    control_dir, token, image=image, network=network)
                 receiver.expect(run_id, token)
             except Exception:
                 # No container exists yet (proved above), so bootstrap preparation
@@ -768,6 +783,48 @@ def ensure_container(run_id: str, host_workspace: str, *,
             _await_supervisor(handle)
             _retire_bootstrap_token(handle)
         return handle
+
+
+def _verify_bootstrap_token_visible(
+    control_dir: str, token: str, *, image: str, network: str,
+) -> None:
+    """Prove the token is readable AND unlinkable from a fresh worker container
+    before PID1 dials.
+
+    Two Windows-bind-mount failure modes this guards against (runs
+    20671–20684): mode 0600/0700 metadata denies even the worker uid, and the
+    supervisor deliberately sends an EMPTY-token Hello when it cannot unlink the
+    token after reading it. Read it back and try a probe unlink through the SAME
+    kind of mount the run container gets, as the SAME user, retrying until both
+    succeed.
+    """
+    probe = (
+        f"cat {CONTAINER_CONTROL_DIR}/token; "
+        f"touch {CONTAINER_CONTROL_DIR}/.probe && "
+        f"rm -f {CONTAINER_CONTROL_DIR}/.probe"
+    )
+    # NOTE --entrypoint bash: the worker image's ENTRYPOINT is the runtime
+    # supervisor, which treats `bash -c ...` as ITS arguments — without the
+    # override the probe never runs and the check always "fails" (run-20684).
+    for attempt in range(20):
+        if attempt:
+            time.sleep(0.5)
+        r = _docker(
+            "run", "--rm", "--network", network,
+            "--entrypoint", "bash",
+            "--user", "kali",
+            "--mount", f"type=bind,source={_mount_source(control_dir)},"
+                       f"target={CONTAINER_CONTROL_DIR}",
+            image, "-c", probe, timeout=45,
+        )
+        got = (r.stdout or "").strip().split("\n")[0]
+        probe_rc = r.returncode
+        if got == token and probe_rc == 0:
+            return
+    raise RuntimeError(
+        "RCP bootstrap token not usable from a worker container mount "
+        f"(wrote {len(token)} chars, last read back {len(got)} chars, "
+        f"probe rc={probe_rc})")
 
 
 def _await_supervisor(handle: ContainerHandle) -> None:
