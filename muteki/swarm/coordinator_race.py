@@ -1752,6 +1752,38 @@ class _RaceHealthMixin:
         except Exception:
             pass
 
+    def _record_worker_resource_limits(self, limits: "Any") -> None:
+        """D07: make the effective container limits observable.
+
+        An unrecorded limit is indistinguishable from a missing one when a run later
+        OOMs, so the effective values (including "unlimited", and any value that was
+        configured but rejected) are recorded once per run at container creation.
+        """
+        summary = describe_limits(limits)
+        self._worker_resource_limits = dict(limits.to_dict())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._emit_worker_resource_limits(
+                self._worker_resource_limits, summary))
+        except RuntimeError:
+            pass
+
+    async def _emit_worker_resource_limits(self, payload: dict[str, Any],
+                                           summary: str) -> None:
+        if self.bus is None:
+            return
+        try:
+            await self.bus.emit(Event(
+                event_type=EventType.BLACKBOARD_DELTA,
+                run_id=self.run_id,
+                challenge_id=self.challenge.id,
+                payload=blackboard_delta_payload(
+                    "worker_resource_limits", actor="coordinator",
+                    summary=summary, **payload),
+            ))
+        except Exception:
+            pass
+
     def _record_runtime_degraded(
         self,
         *,
@@ -1803,6 +1835,15 @@ class _RaceHealthMixin:
             return None
         try:
             from muteki.solver.container_exec import ensure_container
+            # D07: resolve the effective container limits in ONE place so the
+            # Coordinator and standby paths cannot drift apart again. Previously
+            # every call site passed nothing, so the --memory/--cpus/--pids-limit
+            # flags were never appended and the container ran uncapped while sharing
+            # CPU/RAM with the local model. Unset stays unset (we do not invent
+            # upstream's 2GB/2CPU default); a malformed value is reported, not
+            # silently dropped.
+            from muteki.solver.worker_resources import describe_limits, resolve_limits
+            limits = resolve_limits()
             # Mount the whole run workspace, not only workspace/workers: the shared
             # graph lives in workspace/graph and the blackboard skill needs it.
             self._container_handle = ensure_container(
@@ -1811,7 +1852,9 @@ class _RaceHealthMixin:
                 network=self.worker_network,
                 account_root=(str(self.credential_accounts_root)
                               if self.credential_accounts_root is not None else None),
+                **limits.as_kwargs(),
             )
+            self._record_worker_resource_limits(limits)
         except Exception as exc:  # noqa: BLE001
             self._container_unavailable = True
             self._record_runtime_degraded(

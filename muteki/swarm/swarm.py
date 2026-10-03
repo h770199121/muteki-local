@@ -572,6 +572,9 @@ class Swarm(
         )
         self._container_unavailable = False
         self._runtime_degraded: list[dict[str, Any]] = []
+        # D07: effective container resource limits for this run. "unlimited" values
+        # are recorded explicitly so a later OOM is distinguishable from a cap.
+        self._worker_resource_limits: dict[str, Any] = {}
         self._agent_state_dirs: set[Path] = set()
         # engines dropped from the roster by a dispatch-time health-check failure
         # (e.g. cursor headless auth lapsed). engine -> reason. Used to dedup the
