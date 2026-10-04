@@ -121,6 +121,12 @@ def _skill_block() -> dict[str, Any]:
         if not p.is_file():
             continue
         rel = p.relative_to(SKILL_SOURCES).as_posix()
+        # Batch-4-1 (audit 3.4): derived indexes and agent tool state must not
+        # enter the knowledge fingerprint — they change while the knowledge is
+        # unchanged, which would fake a skills drift.
+        parts = {part for part in p.parts}
+        if ".mimosa" in parts or p.name == ".kbsearch-index.db":
+            continue
         digest = hashlib.sha256()
         with p.open("rb") as fh:
             for chunk in iter(lambda: fh.read(65536), b""):

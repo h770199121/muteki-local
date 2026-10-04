@@ -9,6 +9,14 @@ import { DeckState, EventType, MutekiEvent, emptyDeck, reduce } from "./events";
  * still available for manual experiments that intentionally bypass that proxy.
  */
 export const API = process.env.NEXT_PUBLIC_MUTEKI_API || "";
+
+// Batch 4-2: the writeup renderer resolves `writeup-shots/*` images against
+// the ACTIVE run's asset route (/api/runs/<id>/writeup-assets/<name>).
+// Module-level because deep bubble components don't receive runId as a prop.
+let ACTIVE_RUN_ID = "";
+export function activeRunId(): string {
+  return ACTIVE_RUN_ID;
+}
 const CONTROL_CAS_ACTIONS = new Set([
   "pause", "freeze", "resume", "thaw", "stop", "complete",
 ]);
@@ -156,6 +164,8 @@ export function useRun(runId: string) {
   const [deck, setDeck] = useState<DeckState>(() => emptyDeck(runId));
   const [connected, setConnected] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  // Batch 4-2: publish the active run id for the writeup renderer.
+  ACTIVE_RUN_ID = runId;
 
   useEffect(() => {
     esRef.current?.close();

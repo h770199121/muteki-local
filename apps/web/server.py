@@ -1448,6 +1448,82 @@ def create_app(manager: Optional[RunManager] = None) -> FastAPI:
             )
         return {"files": saved}
 
+    @app.get("/api/runs/{run_id}/writeup")
+    async def run_writeup(run_id: str) -> Any:
+        """Serve the finished writeup markdown: workspace/writeup.md.
+
+        Batch 4-2: the deck renders this with markdown + image support; images
+        are served separately via /writeup-assets (sandboxed to writeup-shots).
+        """
+        mgr: RunManager = app.state.manager
+        if mgr.get(run_id) is None:
+            raise HTTPException(status_code=404, detail="unknown run")
+        path = (mgr.workspace_dir(run_id) / "writeup.md").resolve()
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="writeup not generated")
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(path.read_text(encoding="utf-8"))
+
+    @app.get("/api/runs/{run_id}/writeup-assets/{name}")
+    async def run_writeup_assets(run_id: str, name: str) -> Any:
+        """Serve one writeup screenshot: workspace/writeup-shots/<name>.
+
+        Batch 4-2: the name is whitelist-validated and resolved strictly inside
+        writeup-shots/ — no "..", no separators, no symlink escape via a
+        resolve-prefix check.
+        """
+        import re as _re
+        if not _re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name) or ".." in name:
+            raise HTTPException(status_code=400, detail="bad asset name")
+        mgr: RunManager = app.state.manager
+        if mgr.get(run_id) is None:
+            raise HTTPException(status_code=404, detail="unknown run")
+        shots = (mgr.workspace_dir(run_id) / "writeup-shots").resolve()
+        path = (shots / name).resolve()
+        if path.parent != shots or not path.is_file():
+            raise HTTPException(status_code=404, detail="asset not found")
+        from fastapi.responses import FileResponse
+        media = "image/png" if name.endswith(".png") else "application/octet-stream"
+        return FileResponse(path, media_type=media)
+
+    @app.post("/api/runs/{run_id}/writeup-evidence")
+    async def run_writeup_evidence(run_id: str) -> Any:
+        """Build/refresh workspace/writeup-evidence.json from the run events.
+
+        Batch 4-2 (product entry): covers UI-initiated runs, not just the
+        evaluation harness. Screenshots are NOT taken here (no browser in the
+        web container) — the host collector
+        (labs/nyu-ctf/writeup_evidence.py) fills the ``screenshots`` field
+        while the target instance is alive.
+        """
+        mgr: RunManager = app.state.manager
+        run = mgr.get(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="unknown run")
+        safe = mgr._safe_run_id(run_id)
+        jsonl = mgr.sessions_root / f"{safe}.jsonl"
+        if not jsonl.is_file():
+            raise HTTPException(status_code=404, detail="no event stream")
+        events = []
+        for line in jsonl.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    events.append(json.loads(line))
+                except ValueError:
+                    continue
+        from muteki.solver.writeup_evidence import build_evidence_manifest
+        manifest = build_evidence_manifest(
+            events, workspace=mgr.workspace_dir(run_id))
+        manifest["notes"].append(
+            "screenshots empty: collected by the HOST collector "
+            "(labs/nyu-ctf/writeup_evidence.py) while the target is alive")
+        out = mgr.workspace_dir(run_id) / "writeup-evidence.json"
+        out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
+                       encoding="utf-8")
+        return {"ok": True, "written_to": str(out),
+                "key_pages": len(manifest.get("key_pages") or []),
+                "artifacts": len(manifest.get("artifacts") or {})}
+
     @app.get("/api/runs/{run_id}/events")
     async def events(run_id: str, request: Request) -> Any:
         # Auth: EventSource can't send an Authorization header, so the SSE stream

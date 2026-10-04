@@ -266,21 +266,25 @@ def _official_flags(ch: dict) -> list[str]:
 
 
 def _eval_solved(verdict, gate_solved: bool, official: list[str]) -> bool:
-    """A02 (audit 5.3): the official-flag comparison stays authoritative.
+    """Batch-4-1 convergence: `solved` is ALWAYS the evidence verdict.
 
-    The gate verdict is ONLY a fallback for platform challenges whose official
-    value we do not hold — otherwise a run whose gate accepted the WRONG flag
-    (e.g. flag{wrong} vs flag{expected}) would be scored as solved. When an
-    official flag exists, `verdict.solved` already covers the legitimate case:
-    a gate acceptance of the official value necessarily makes the flag string
-    appear in accepted evidence, which `evaluate_attempt` requires.
+    Gate-derived flags (platform instances without a known official value) now
+    flow through evaluate_attempt's own pipeline — they must trace to real tool
+    output like any other candidate — so the harness no longer needs a separate
+    gate fallback and a wrong-flag acceptance cannot be rescued by it.
+    ``gate_solved`` stays a disclosed field on the result row only.
     """
-    return verdict.solved if official else gate_solved
+    return verdict.solved
 
 
 def run_static(ch: dict, args, password: str) -> int:
     """File-based challenge: no target container; handouts attached by path."""
     t0 = time.time()
+    # Batch-4-1 (audit 3.4): freeze the environment BEFORE the run starts — a
+    # binding captured at result time records whatever the world looks like
+    # AFTER the run, not the conditions the run actually used. attempt=1: the
+    # harness runs a single worker with a single execution generation.
+    env_binding = freeze_eval_env(budget_s=args.budget, attempt=1)
     tok = http("POST", "/api/auth/login", {"password": password})["token"]
     run_id = http("POST", "/api/runs", {}, token=tok)["run_id"]
     files_note = ", ".join(Path(f).name for f in ch["files"]) or "(no files — puzzle is in the description)"
@@ -352,7 +356,7 @@ def run_static(ch: dict, args, password: str) -> int:
         "evidence_links": verdict.evidence_links,
         "unlinked_flags": sorted(set(verdict.unlinked_flags)),
         "verdict_attempt_matched": verdict.attempt_matched,
-        "env_binding": freeze_eval_env(budget_s=args.budget),
+        "env_binding": env_binding,
         "events": len(events),
     }
     print(json.dumps(result, ensure_ascii=False))
@@ -375,6 +379,9 @@ def main() -> int:
                     help="mention the kali-claw-kb path in the prompt (active KB surfacing)")
     ap.add_argument("--extra", default="",
                     help="operator insight text appended to the prompt (simulates human-in-the-loop info)")
+    ap.add_argument("--skip-shots", action="store_true",
+                    help="skip the post-run writeup evidence collector "
+                         "(screenshots of key pages while the target is alive)")
     args = ap.parse_args()
 
     password = os.environ.get("MUTEKI_WEB_PASSWORD", "").strip()
@@ -387,6 +394,10 @@ def main() -> int:
 
     ch = CHALLENGES[args.challenge]
     t0 = time.time()
+    # Batch-4-1: bind the environment before the run (audit 3.4), attempt=1 for
+    # the single-worker harness.
+    env_binding = freeze_eval_env(budget_s=args.budget, attempt=1)
+    run_id = ""
     start_target(ch)
 
     try:
@@ -460,7 +471,7 @@ def main() -> int:
             "evidence_links": verdict.evidence_links,
             "unlinked_flags": sorted(set(verdict.unlinked_flags)),
             "verdict_attempt_matched": verdict.attempt_matched,
-            "env_binding": freeze_eval_env(budget_s=args.budget),
+            "env_binding": env_binding,
             "events": len(events),
         }
         print(json.dumps(result, ensure_ascii=False))
@@ -468,6 +479,19 @@ def main() -> int:
             fh.write(json.dumps(result, ensure_ascii=False) + "\n")
         return 0
     finally:
+        # Batch 4-2: collect writeup evidence (manifest + screenshots) while the
+        # target instance is STILL ALIVE — after teardown a GET replay cannot
+        # reproduce the pages. Bounded, best-effort, never masks the result.
+        if ch.get("remote") and not args.skip_shots and run_id:
+            try:
+                collector = Path(__file__).resolve().parent / "writeup_evidence.py"
+                subprocess.run(
+                    [sys.executable, "-X", "utf8", "-B", str(collector),
+                     "--run", run_id, "--shots", "4", "--timeout", "20"],
+                    capture_output=True, text=True, timeout=140)
+            except Exception as exc:
+                print(f"writeup evidence collection skipped: {exc}",
+                      file=sys.stderr)
         if not args.keep_target:
             stop_target(ch)
 

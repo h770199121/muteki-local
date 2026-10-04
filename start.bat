@@ -63,7 +63,9 @@ if "%MODEL_CHOICE%"=="3" (
     set "PORT=18214"
     set "CTX=131072"
     set "SPECN=none"
-    set "LINE=C"
+    rem Batch-4-1 (audit 3.5): Occamy dual listens on 18214 — the old LINE=C
+    rem pointed the swarm at the stale 8890 endpoint (port mismatch).
+    set "LINE=X4"
 )
 if "%MODEL_CHOICE%"=="4" (
     set "MODEL=D:\AI\Ninfer\models\Ternary-Bonsai-2-27B-PTQ1_0.gguf"
@@ -193,7 +195,12 @@ if errorlevel 1 (
 echo [OK] Model is up (localhost:%PORT%, %ALIAS%).
 
 rem ---- 3) point the swarm at this model ----
-uv run --no-project python D:\AI\muteki-local\labs\nyu-ctf\switch_line.py --line %LINE% 2>nul || echo [WARN] switch_line %LINE% failed - set swarm endpoint manually.
+rem Batch-4-1 (audit 3.5): a failed switch MUST abort — continuing would run the
+rem swarm against the previous model line while the menu claims otherwise.
+uv run --no-project python D:\AI\muteki-local\labs\nyu-ctf\switch_line.py --line %LINE% 2>nul || (
+    echo [ERROR] switch_line %LINE% failed - refusing to start with a stale model line.
+    goto :fail
+)
 
 rem ---- 4) Control plane ----
 docker compose up -d

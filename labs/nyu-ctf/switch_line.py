@@ -50,6 +50,12 @@ LINES = {
              "key": REMOTE_KEY},
     "C": {"base": "http://host.docker.internal:8890/v1", "model": "occamy-1.0",
           "key": REMOTE_KEY},
+    # Occamy dual on the standard llama.cpp launcher (both start.bat menus,
+    # option 3): 19.7 GiB weights → dual only, listens on 18214. Batch-4-1:
+    # the menus referenced this line without it existing, so a failed switch
+    # silently left the swarm on the previous model line.
+    "X4": {"base": "http://host.docker.internal:18214/v1", "model": "occamy-1.0",
+           "key": "local-no-key"},
 }
 
 

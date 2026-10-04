@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 # Event types that indicate the worker actually executed something.
 EXECUTION_EVENT_TYPES = frozenset({
@@ -121,6 +121,41 @@ def _mentions(text: str, flag: str) -> bool:
     return bool(flag) and flag in text
 
 
+def _output_text(payload: dict[str, Any]) -> str:
+    """Extract ONLY the output fields of a tool.result payload (audit batch-4-1).
+
+    Matching the whole event JSON let a flag inside the COMMAND text (e.g.
+    ``submit-flag 'CTF2{…}'``) count as "real output" — the command is worker
+    input, not target response. The whitelist covers the shapes this project
+    emits: ``result.condensed`` (dict) / ``result`` (str) / ``output`` /
+    ``content``. Everything else (tool name, artifact ids, generations) is
+    deliberately excluded.
+    """
+    parts: list[str] = []
+    for key in ("output", "content"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            parts.append(value)
+    result = payload.get("result")
+    if isinstance(result, Mapping):
+        condensed = result.get("condensed")
+        if isinstance(condensed, str):
+            parts.append(condensed)
+    elif isinstance(result, str):
+        parts.append(result)
+    return "\n".join(parts)
+
+
+def _event_generation(payload: dict[str, Any]) -> int | None:
+    gen = payload.get("execution_generation")
+    if gen is None:
+        return None
+    try:
+        return int(gen)
+    except (TypeError, ValueError):
+        return None
+
+
 def evaluate_attempt(
     events: Iterable[dict[str, Any]],
     *,
@@ -170,9 +205,12 @@ def evaluate_attempt(
     exec_seqs: list[int] = []
     text_hits: list[str] = []
     tool_hits: list[str] = []
-    #: audit 5.3 follow-up: REAL tool outputs (tool.result only — tool.start is the
-    #: command input, text.delta is prose), for acceptance→output traceability.
-    tool_outputs: list[tuple[int, str]] = []
+    #: audit 5.3 follow-up + batch-4-1: REAL tool outputs (tool.result only —
+    #: tool.start is the command input, text.delta is prose), as
+    #: (seq, OUTPUT-ONLY text, generation) for acceptance→output traceability.
+    #: Command text is deliberately excluded: a flag typed into a command (e.g.
+    #: submit-flag 'CTF2{…}') is worker input, not target response.
+    tool_outputs: list[tuple[int, str, int | None]] = []
 
     for event in events:
         etype = str(event.get("event_type") or "")
@@ -180,7 +218,9 @@ def evaluate_attempt(
         blob = json.dumps(event, ensure_ascii=False)
 
         if etype in {"tool.result", "tool_result"}:
-            tool_outputs.append((_event_seq(event), blob))
+            tool_outputs.append((
+                _event_seq(event), _output_text(payload),
+                _event_generation(payload)))
         if etype in EXECUTION_EVENT_TYPES or etype.startswith("tool."):
             exec_seqs.append(_event_seq(event))
 
@@ -193,38 +233,66 @@ def evaluate_attempt(
             else:
                 tool_hits.append(label)
 
+    # Batch-4-1 generation binding: when an attempt is specified, outputs from
+    # other generations are not evidence for THIS attempt.
+    if attempt is not None:
+        tool_outputs = [row for row in tool_outputs
+                        if row[2] is None or row[2] == int(attempt)]
+
     verdict.execution_observed = bool(exec_seqs)
     verdict.candidate_sources = text_hits + tool_hits
     verdict.candidate_found = bool(verdict.candidate_sources)
 
     # ---- pass 2: trusted acceptance, scoped to this attempt ----
-    accepted_values: list[str] = []
+    #: batch-4-1: gate acceptance requires EVERY expected flag to carry
+    #: acceptance evidence (same "all" semantics as the external judge).
+    accepted_values: set[str] = set()
+    acceptance_rows: list[tuple[str, int, dict[str, Any], int | None]] = []
     for event in events:
         etype = str(event.get("event_type") or "")
         payload = event.get("payload") or {}
-        blob = json.dumps(event, ensure_ascii=False)
 
-        mentions = any(_mentions(blob, f) for f in flags)
         is_accept_type = etype in ACCEPT_EVENT_TYPES
-
-        if not (mentions and is_accept_type):
+        if not is_accept_type:
             continue
         if _is_rejection(payload):
             verdict.rejected_candidates += 1
             continue
 
-        # Scope the acceptance to the attempt when a generation is available.
-        gen = payload.get("execution_generation")
-        if attempt is not None and gen is not None:
-            try:
-                if int(gen) != int(attempt):
-                    continue
-            except (TypeError, ValueError):
-                continue
+        # run.finished may only serve as acceptance evidence when the
+        # coordinator itself marked the run solved (batch-4-1③): a finished
+        # payload carrying a flag string with solved=false is a candidate
+        # record, not an acceptance.
+        if etype in {"run.finished", "run_finished"} and payload.get("solved") is not True:
+            continue
 
-        verdict.gate_accepted = True
+        # Structured flag fields on acceptance events are authoritative; fall
+        # back to the OUTPUT-only text for events without structured fields.
+        structured = ""
+        for key in ("flag", "flags"):
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                structured += f"\n{value}"
+            elif isinstance(value, list):
+                structured += "\n" + "\n".join(
+                    str(v) for v in value if v)
+        mentions = any(
+            _mentions(structured or _output_text(payload), f) for f in flags)
+        if not mentions:
+            continue
+
+        # Scope the acceptance to the attempt when a generation is available.
+        gen = _event_generation(payload)
+        if attempt is not None and gen is not None and gen != int(attempt):
+            continue
+
+        acceptance_rows.append((etype, _event_seq(event), payload, gen))
         verdict.acceptance_sources.append(f"{etype}:{_event_seq(event)}")
-        accepted_values.extend(f for f in flags if _mentions(blob, f))
+        accepted_values.update(f for f in flags
+                               if _mentions(structured or _output_text(payload), f))
+
+    verdict.gate_accepted = bool(flags) and all(
+        f in accepted_values for f in flags)
 
     # ---- pass 3: external judge ----
     if accepted_flags is not None:
@@ -242,11 +310,13 @@ def evaluate_attempt(
 
     # ---- audit 5.3 follow-up: acceptance must trace to REAL tool output ----
     # A flag.accepted event alone proves a decision, not an execution: the same
-    # flag value must be findable in at least one tool.result blob. Otherwise the
-    # acceptance is downgraded (an operator echo / board write cannot count).
+    # flag value must be findable in at least one tool.result OUTPUT (whitelist
+    # fields only — see _output_text). Otherwise the acceptance is downgraded
+    # (an operator echo / board write cannot count).
     if verdict.gate_accepted:
         for value in dict.fromkeys(accepted_values):
-            hits = [seq for seq, blob in tool_outputs if _mentions(blob, value)]
+            hits = [seq for seq, text, _gen in tool_outputs
+                    if _mentions(text, value)]
             if hits:
                 verdict.evidence_links.append({
                     "flag": value, "event_type": "tool.result",

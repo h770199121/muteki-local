@@ -808,8 +808,14 @@ _RESPOND_WRITEUP_PROMPT = (
     "investigation. Synthesize the report from the confirmed session history now. "
     "Structure it as:\n"
     "  ## 漏洞点  (the root cause / vulnerability)\n"
-    "  ## 利用步骤  (numbered, reproducible — the real commands/requests you used)\n"
+    "  ## 利用步骤  (numbered, reproducible — the real commands/requests you used, "
+    "with the key response excerpts)\n"
     "  ## Flag  (the flag and where it came from)\n"
+    "  ## 限制与说明  (what could NOT be re-verified: expired instance, POST-only "
+    "session state, truncated output — state it plainly instead of guessing)\n"
+    "A '关键截图与证据' chapter (browser screenshots + raw artifact pointers) is "
+    "appended to your report automatically by the host — do NOT write that chapter "
+    "yourself and do NOT invent image links or file names.\n"
     "Keep it tight and technical. Output ONLY the markdown writeup, nothing else."
 )
 
@@ -894,6 +900,11 @@ class CliSolver:
         self.solver_id = base
         self.insight = insight
         self.shared_graph = shared_graph
+        # workdir must be assigned BEFORE the default ArtifactStore: the D02 spill
+        # root parks artifacts inside the run workspace, and reading self._workdir
+        # here before assignment raised AttributeError on every direct construction
+        # without an explicit store (audit 3.1 / batch-4-0).
+        self._workdir = workdir
         self.artifacts = artifacts or ArtifactStore(root=str(
             # D02: spill artifacts must outlive the worker process — a tempdir
             # root dies with the container and the evidence chain with it. When
@@ -905,7 +916,6 @@ class CliSolver:
         self.driver = driver or driver_for(engine)
         self.max_turns = max_turns
         self.timeout = timeout
-        self._workdir = workdir
         self._staged_files: list[str] = []  # attachment basenames copied into cwd
         # eval hygiene: offline mode denies the agent's web tools so a bench run
         # can't be contaminated by a writeup lookup. Keep web ON for real CTF.
@@ -5728,7 +5738,8 @@ class CliSolver:
                                  or edge_state.STUCK_LIMIT))
 
         await self._emit(EventType.RUN_STARTED,
-                         challenge=self.challenge.model_dump())
+                         challenge=self.challenge.model_dump(),
+                         scope="worker")
         goal = str(env.get("goal") or self.intent_goal
                    or self._engagement_goal())
         await self._emit(
@@ -6150,7 +6161,7 @@ class CliSolver:
                             flags=partial_flags)
 
     async def _run_bootstrap(self) -> SolveOutcome:
-        await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump())
+        await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump(), scope="worker")
         mode = "offline" if not self.web_access else "web"
         kb_note = " +KB" if self.kb else ""
         await self._emit(
@@ -6401,7 +6412,7 @@ class CliSolver:
         structured Fact(s). Short-scoped — prevents context explosion by keeping
         each worker's scope narrow. If the worker times out or produces unparseable
         output, a conclude fallback fires (same session, forced summary)."""
-        await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump())
+        await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump(), scope="worker")
         mode_str = "offline" if not self.web_access else "web"
         kb_note = " +KB" if self.kb else ""
         await self._emit(
@@ -6592,7 +6603,7 @@ class CliSolver:
     async def _run_review(self) -> SolveOutcome:
         """Review-Arbiter: audit global graph and emit executable control actions.
         It never accepts flags or marks the run solved."""
-        await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump())
+        await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump(), scope="worker")
         await self._emit(
             EventType.REASONING_DELTA,
             text=f"[{self.driver.name}] review-arbiter mode — auditing swarm trajectory.\n")
@@ -6680,7 +6691,7 @@ class CliSolver:
                 question=text,
             )
         else:
-            await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump())
+            await self._emit(EventType.RUN_STARTED, challenge=self.challenge.model_dump(), scope="worker")
             await self._emit(
                 EventType.REASONING_DELTA,
                 text=f"[{self.driver.name}] standby — resuming session for "
@@ -6705,11 +6716,42 @@ class CliSolver:
             prompt = _RESPOND_MARK_FALSE_PROMPT.format(
                 flag=self.hitl_cmd.get("flag") or "(the reported flag)", note=note)
         elif action == "writeup":
-            prompt = (
+            base_prompt = (
                 _RESPOND_PENTEST_WRITEUP_PROMPT
                 if str(getattr(self.challenge, "mode", "ctf")) == "pentest"
-                else _RESPOND_WRITEUP_PROMPT
-            )
+                else _RESPOND_WRITEUP_PROMPT)
+            prompt = base_prompt
+            # Batch 4-2: the host collector may have left an evidence manifest in
+            # the run workspace (two levels above this worker cwd). Inject a
+            # compact summary so the writeup cites real pages; screenshots
+            # themselves are appended HOST-SIDE after generation and must never
+            # be fabricated by the model.
+            evidence_path = wd.parent / "writeup-evidence.json"
+            try:
+                if evidence_path.is_file():
+                    manifest = json.loads(
+                        evidence_path.read_text(encoding="utf-8"))
+                    pages = manifest.get("key_pages") or []
+                    shots = manifest.get("screenshots") or []
+                    arts = manifest.get("artifacts") or {}
+                    if pages or shots or arts:
+                        lines = ["", "## 已采集证据（由宿主自动采集；"
+                                     "截图与产物章节将由系统附加到正文之后，"
+                                     "不要自行编造图片或文件路径）"]
+                        for p in pages[:4]:
+                            lines.append(f"- 页面: {p.get('url')} "
+                                         f"(来源事件 seq={p.get('seq')}, "
+                                         f"{p.get('reason')})")
+                        if shots:
+                            lines.append(
+                                f"- 截图 {len(shots)} 张: " + ", ".join(
+                                    str(s.get("file") or "") for s in shots))
+                        if arts:
+                            lines.append(f"- 原始输出产物 {len(arts)} 份 "
+                                         "(workspace/arts/)")
+                        prompt = prompt + "\n" + "\n".join(lines) + "\n"
+            except (OSError, ValueError):
+                pass
         else:  # ask / hint / redirect / anything conversational
             question = text or "(no question text)"
             if action == "redirect":

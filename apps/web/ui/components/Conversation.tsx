@@ -6,7 +6,7 @@ import {
   ChatMessage, DeckState, HitlRequest, SolverCost, SwarmDigest,
   coordinatorThread, hitlDeliveryState, swarmDigest,
 } from "@/lib/events";
-import { getWorkerSettings, checkAuth, SavedFile } from "@/lib/useRun";
+import { getWorkerSettings, checkAuth, SavedFile, activeRunId, API } from "@/lib/useRun";
 import {
   commandIdForDecision, type DecisionControlAction,
 } from "@/lib/controlClient";
@@ -164,6 +164,93 @@ function activeFlowIndex(digest: SwarmDigest): number {
   return 2;
 }
 
+// ── Batch 4-2: minimal writeup renderer ─────────────────────────────────────
+// The writeup is model-generated markdown in a constrained shape (headings,
+// "- " lists, bold, code, and writeup-shots image lines). A dependency-free
+// renderer covers exactly that subset; images resolve against the active
+// run's /api/runs/<id>/writeup-assets/<name> route. Anything unrecognized
+// stays plain text — never invent markup.
+
+function looksLikeWriteup(text: string): boolean {
+  return /^##\s/m.test(text) || /!\[[^\]]*\]\([^)]+\)/.test(text);
+}
+
+function resolveAsset(src: string): string {
+  const m = src.match(/^writeup-shots\/([A-Za-z0-9_.-]+)$/);
+  if (m) {
+    const rid = activeRunId();
+    if (rid) return `${API}/api/runs/${rid}/writeup-assets/${m[1]}`;
+  }
+  return src;
+}
+
+function inlineSegments(text: string, keyBase: string): ReactNode[] {
+  // bold and code spans only — enough for the writeup subset.
+  const out: ReactNode[] = [];
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  parts.forEach((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      out.push(<strong key={`${keyBase}-b${i}`}>{part.slice(2, -2)}</strong>);
+    } else if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      out.push(<code key={`${keyBase}-c${i}`}>{part.slice(1, -1)}</code>);
+    } else if (part) {
+      out.push(part);
+    }
+  });
+  return out;
+}
+
+function WriteupBody({ text }: { text: string }) {
+  const blocks: ReactNode[] = [];
+  const lines = text.split("\n");
+  const list: string[] = [];
+  let key = 0;
+  const flushList = () => {
+    if (list.length) {
+      const items = [...list];
+      blocks.push(
+        <ul key={`ul${key++}`}>
+          {items.map((li, i) => (
+            <li key={i}>{inlineSegments(li, `li${key}-${i}`)}</li>
+          ))}
+        </ul>,
+      );
+      list.length = 0;
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const img = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if (img) {
+      flushList();
+      blocks.push(
+        <img key={`img${key++}`} className="writeup-shot"
+             src={resolveAsset(img[2])} alt={img[1]}
+             style={{ maxWidth: "100%", borderRadius: 6 }} />,
+      );
+      continue;
+    }
+    const h = line.match(/^(#{2,4})\s+(.*)$/);
+    if (h) {
+      flushList();
+      blocks.push(<h3 key={`h${key++}`}>{inlineSegments(h[2], `h${key}`)}</h3>);
+      continue;
+    }
+    const li = line.match(/^[-*]\s+(.*)$/);
+    if (li) {
+      list.push(li[1]);
+      continue;
+    }
+    if (!line.trim()) {
+      flushList();
+      continue;
+    }
+    blocks.push(<p key={`p${key++}`}>{inlineSegments(line, `p${key}`)}</p>);
+  }
+  flushList();
+  return <div className="body writeup">{blocks}</div>;
+}
+
 // ── coordinator bubble (human · system · coordinator/reason) ─────────────────
 function CoordBubble({
   m,
@@ -181,6 +268,10 @@ function CoordBubble({
   const cls = m.role === "human" ? "you" : m.role === "system" ? `system ${m.kind}` : `coordinator ${m.kind}`;
   // long coordinator reasoning folds to keep the thread scannable
   const isLong = m.role === "agent" && m.kind === "reasoning" && text.length > 520;
+  // Batch 4-2: a generated writeup (## headings + writeup-shots images) renders
+  // through the minimal markdown renderer with image support — never folded,
+  // never plain text.
+  const isWriteup = m.role === "agent" && looksLikeWriteup(text);
   // Coordinator-produced prose (text/reasoning) is what a generated writeup lands
   // as — there is no distinct "writeup" message kind, so any substantive agent
   // bubble gets a copy button. Copying the whole report into a ticket/writeup is
@@ -209,7 +300,9 @@ function CoordBubble({
         )}
         {clock(m.ts) && <span className="ts">{clock(m.ts)}</span>}
       </div>
-      {isLong ? (
+      {isWriteup ? (
+        <WriteupBody text={text} />
+      ) : isLong ? (
         <details className="coord-fold">
           <summary>{text.slice(0, 240).trimEnd()}…</summary>
           <div className="body">{text}</div>

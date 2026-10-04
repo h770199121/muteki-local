@@ -51,9 +51,64 @@ class EvalSolvedRoutingTests(unittest.TestCase):
         self.assertFalse(_eval_solved(verdict, gate_solved=True,
                                       official=["flag{expected}"]))
 
-    def test_no_official_flag_falls_back_to_gate(self):
+    def test_no_official_flag_still_requires_evidence(self):
+        # Batch-4-1 收敛：gate fallback 也必须走证据管线——verdict.solved=false
+        # （gate flag 回查不到真实输出）时不得被 gate_solved 救回。
         verdict = type("V", (), {"solved": False})()
-        self.assertTrue(_eval_solved(verdict, gate_solved=True, official=[]))
+        self.assertFalse(_eval_solved(verdict, gate_solved=True, official=[]))
+
+    def test_gate_derived_flag_with_evidence_solves(self):
+        # 无官方 flag：RUN_FINISHED(solved=true) 给出候选，且同 flag 出现在
+        # 真实 tool.result 输出中 → 证据成立，判解出。
+        events = [
+            {"event_type": "tool.result", "seq": 5,
+             "payload": {"result": {"condensed": "flag page: CTF2{x}"}}},
+            {"event_type": "run.finished", "seq": 9,
+             "payload": {"solved": True, "flag": "CTF2{x}"}},
+        ]
+        v = evaluate_attempt(events, expected_flags="")
+        self.assertTrue(v.solved)
+        self.assertTrue(v.evidence_links)
+
+    def test_gate_derived_flag_without_output_is_rejected(self):
+        # 无官方 flag：终态声称解出但输出中找不到 flag（截断/无落盘）→ 不解出，
+        # 且记录 unlinked 原因。
+        events = [
+            {"event_type": "tool.result", "seq": 5,
+             "payload": {"result": {"condensed": "login page, no flag here"}}},
+            {"event_type": "run.finished", "seq": 9,
+             "payload": {"solved": True, "flag": "CTF2{x}"}},
+        ]
+        v = evaluate_attempt(events, expected_flags="")
+        self.assertFalse(v.solved)
+        self.assertIn("CTF2{x}", v.unlinked_flags)
+
+    def test_command_field_flag_is_not_output_evidence(self):
+        # batch-4-1①：flag 只出现在命令字段（worker 输入）而非响应输出时，
+        # 不得作为"真实输出"证据。
+        events = [
+            {"event_type": "tool.result", "seq": 5,
+             "payload": {"tool": "bash: submit-flag 'CTF2{x}'",
+                         "result": {"condensed": "OK wrote verified fact"}}},
+            {"event_type": "run.finished", "seq": 9,
+             "payload": {"solved": True, "flag": "CTF2{x}"}},
+        ]
+        v = evaluate_attempt(events, expected_flags="CTF2{x}")
+        self.assertFalse(v.gate_accepted)
+        self.assertFalse(v.solved)
+
+    def test_generation_binding_output_vs_acceptance(self):
+        # batch-4-1④：attempt=2 时，第 1 代的输出不能作为第 2 代接受的证据。
+        events = [
+            {"event_type": "tool.result", "seq": 5, "execution_generation": 1,
+             "payload": {"output": "CTF2{x}", "execution_generation": 1}},
+            {"event_type": "flag.accepted", "seq": 6, "execution_generation": 2,
+             "payload": {"flag": "CTF2{x}", "status": "accepted",
+                         "execution_generation": 2}},
+        ]
+        v = evaluate_attempt(events, expected_flags="CTF2{x}", attempt=2)
+        self.assertFalse(v.gate_accepted)
+        self.assertFalse(v.solved)
 
     def test_known_flag_match_still_solves(self):
         verdict = type("V", (), {"solved": True})()

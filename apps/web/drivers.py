@@ -1896,13 +1896,31 @@ def build_standby_driver(cmd: dict[str, Any], mgr: "RunManager | None" = None) -
                     _clear_runtime_registration()
         try:
             out = await worker.run()
-            # writeup: persist the body to sessions/{id}/writeup.md (and it already
-            # streamed to the chat as the worker's reply).
+            # writeup: persist the body to <workspace>/writeup.md (workspace_dir()
+            # = sessions/<run>/workspace — NOT sessions/<run>/ as an older comment
+            # claimed), then deterministically append the evidence chapter
+            # (screenshots + artifact pointers) from writeup-evidence.json: the
+            # writeup prompt forbids the model from running tools, so evidence is
+            # appended HOST-SIDE and cannot be invented or omitted by the model.
             artifact_path = ""
             if action == "writeup" and getattr(out, "reply", ""):
                 try:
                     writeup_path = root / "writeup.md"
-                    writeup_path.write_text(out.reply)
+                    body = str(out.reply)
+                    evidence_path = root / "writeup-evidence.json"
+                    if evidence_path.is_file():
+                        try:
+                            import json as _json
+                            from muteki.solver.writeup_evidence import (
+                                append_evidence_section,
+                            )
+                            manifest = _json.loads(
+                                evidence_path.read_text(encoding="utf-8"))
+                            body = append_evidence_section(body, manifest)
+                        except (OSError, ValueError) as exc:
+                            body += (f"\n\n> 注意：证据章节注入失败："
+                                     f"{type(exc).__name__}: {exc}\n")
+                    writeup_path.write_text(body, encoding="utf-8")
                     artifact_path = str(writeup_path)
                 except Exception as exc:
                     raise RuntimeError("writeup artifact could not be persisted") from exc

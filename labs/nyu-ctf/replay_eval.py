@@ -53,6 +53,25 @@ def _load_events(sessions: Path, run_id: str) -> list[dict]:
     return events
 
 
+def _run_level_started(events: list[dict]) -> dict | None:
+    """The RUN-level started event, not the worker-level duplicate.
+
+    The coordinator emits ``run.started`` for the run (no solver_id) AND the
+    worker path reuses the same event type with ``solver_id`` set (batch-4-1:
+    such events now carry ``scope:"worker"``; older streams only distinguish
+    by solver_id). Take the first event with no solver_id, falling back to the
+    earliest of any kind for old streams.
+    """
+    started = [e for e in events
+               if (e.get("event_type") or "") == "run.started"]
+    if not started:
+        return None
+    run_level = [e for e in started
+                 if not str(e.get("solver_id") or "").strip()
+                 and (e.get("payload") or {}).get("scope") != "worker"]
+    return (run_level or started)[0]
+
+
 def _gate_solved(events: list[dict]) -> bool:
     return any(
         (e.get("payload") or {}).get("solved") is True
@@ -116,12 +135,23 @@ def replay(source: Path, sessions: Path, out: Path,
                 "tokens_out": usage.output_tokens,
                 "usage_telemetry_complete": usage.telemetry_complete,
                 "usage_incomplete_reasons": usage.incomplete_reasons,
+                # Batch-4-1: a replayed run keeps the env binding recorded by
+                # the live harness when the archived row carries one — do not
+                # silently drop it in favor of the replay-time environment.
+                "env_binding": row.get("env_binding"),
                 "events": len(events),
                 "replayed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "replay_note": (
-                    "solved 判定在此为 replay 口径：expected_flags 为空时 "
-                    "verdict 不置位，请读 gate_solved/gate_flag（平台/gate 判定）"),
+                    "replay 口径：expected_flags 为空时由 gate-derived flag 走同一条"
+                    "证据管线（须回查真实 tool.result 输出）；solved=verdict.solved，"
+                    "gate_solved/gate_flag 为披露字段；框架纯耗时见 framework_span_s"),
             }
+            started = _run_level_started(events)
+            fins = [e for e in events
+                    if (e.get("event_type") or "") == "run.finished"]
+            if started and fins:
+                record["framework_span_s"] = round(
+                    fins[-1]["ts"] - started["ts"], 1)
             fh.write(json.dumps(record, ensure_ascii=False) + "\n")
             written += 1
     print(f"replayed {written} runs -> {out}", file=sys.stderr)

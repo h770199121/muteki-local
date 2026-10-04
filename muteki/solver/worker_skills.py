@@ -94,15 +94,19 @@ def stage_blackboard_skill(
 
 
 def _hash_tree(path: Path) -> dict[str, str]:
-    """Content fingerprint of every file under a skill folder (audit 5.7/D06).
+    """Content fingerprint of every knowledge file under a skill folder.
 
-    The manifest hashes make "current skill", "stale Worker copy" and "never
-    delivered" distinguishable after the fact, and let a future refresh prove a
-    candidate copy is system-generated and unmodified by the operator.
+    Audit 5.7/D06 + batch-4-1: derived indexes (``.kbsearch-index.db``) and
+    agent tool state (``.mimosa/``) are excluded — they mutate while the
+    knowledge content is unchanged, which would fake a skills drift and break
+    "system-generated vs operator-modified" comparisons in a future refresh.
     """
     out: dict[str, str] = {}
     for p in sorted(path.rglob("*")):
         if not p.is_file():
+            continue
+        parts = set(p.parts)
+        if ".mimosa" in parts or p.name == ".kbsearch-index.db":
             continue
         rel = p.relative_to(path).as_posix()
         digest = hashlib.sha256()
