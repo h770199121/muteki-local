@@ -33,7 +33,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-sys.path.insert(0, str(ROOT / "muteki"))
+# NOTE: insert the REPO ROOT (which contains the `muteki` package), not the
+# package dir itself — `from muteki.solver...` needs the parent on sys.path.
+sys.path.insert(0, str(ROOT))
 
 from muteki.solver.writeup_evidence import build_evidence_manifest  # noqa: E402
 
@@ -60,11 +62,44 @@ def _gate_flag(events: list[dict]) -> str | None:
 
 
 def _screenshot(url: str, out_png: Path, timeout_s: int) -> tuple[bool, str]:
-    """Replay one GET through host Playwright. Returns (ok, detail)."""
+    """Replay one GET through a headless browser. Returns (ok, detail).
+
+    Prefers the host Node Playwright (npx, with its chromium already cached);
+    falls back to the python package when importable.
+    """
+    import shutil
+    import subprocess
+    # Windows: npx is npx.cmd — resolve the full path or CreateProcess fails
+    # with WinError 2.
+    npx = shutil.which("npx") or shutil.which("npx.cmd")
+    if npx:
+        # The playwright CLI ships a screenshot subcommand — no `require` needed
+        # (the npx-cached package is not requirable from plain `node -e`).
+        out_png.parent.mkdir(parents=True, exist_ok=True)
+        # Back-to-back npx launches intermittently fail (browser/profile race,
+        # observed as alternating successes) — one spaced retry settles it.
+        last_detail = ""
+        for attempt in range(2):
+            if attempt:
+                time.sleep(3)
+            try:
+                proc = subprocess.run(
+                    [npx, "playwright", "screenshot",
+                     "--viewport-size=1280,800", "--wait-for-timeout=1500",
+                     url, str(out_png)],
+                    capture_output=True, text=True,
+                    timeout=timeout_s + 40, cwd=str(HERE))
+                if proc.returncode == 0 and out_png.is_file():
+                    return True, "ok"
+                last_detail = (proc.stderr or proc.stdout
+                               or "npx playwright failed")[:500]
+            except subprocess.TimeoutExpired:
+                last_detail = f"browser timeout after {timeout_s + 40}s"
+        return False, last_detail
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        return False, "playwright not installed on host"
+        return False, "playwright not installed on host (neither npx nor python)"
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=True)

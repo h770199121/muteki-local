@@ -50,8 +50,18 @@ def _output_text(payload: dict[str, Any]) -> str:
 
 
 def _extract_url(command: str) -> str:
+    """Pull the first URL from a raw shell line, stripping shell noise.
+
+    URLs parsed out of multi-line curl commands carry trailing line
+    continuations (``\\``), quotes and statement separators — the replay and
+    the writeup both need the clean URL.
+    """
     match = _URL_RE.search(command or "")
-    return match.group(0).rstrip(").,;") if match else ""
+    if not match:
+        return ""
+    url = match.group(0)
+    url = url.split("\\n", 1)[0]
+    return url.rstrip("\\;,\"'").rstrip("\\")
 
 
 def _tool_interactions(events: list[dict[str, Any]]) -> list[dict[str, Any]]:

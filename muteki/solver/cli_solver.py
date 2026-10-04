@@ -2875,6 +2875,7 @@ class CliSolver:
                     # accepted flag that lived in the tail can never be traced
                     # back (run-21073/21567 unlinked evidence). Spill the FULL raw
                     # into the ArtifactStore and reference it on the event.
+                    aid_spill = ""
                     try:
                         aid_spill = self.artifacts.put(raw)
                         result_view["artifact_id"] = aid_spill
@@ -2884,10 +2885,15 @@ class CliSolver:
                 if spill_status is not None:
                     result_view["spill"] = spill_status
                 if result_text or spill_status is not None:
+                    # batch-4-1: the spill artifact id goes on the EVENT TOP LEVEL
+                    # (tool_result_payload's artifact_id param), not buried in the
+                    # result view — the evaluator/collector read the top-level
+                    # field when linking acceptance evidence to raw output.
                     await self._emit(
                         EventType.TOOL_CALL_RESULT,
                         **tool_result_payload(
                             self.driver.name, result_view,
+                            artifact_id=aid_spill,
                             truncated=len(raw) > len(result_text)))
                 if raw:
                     try:
