@@ -144,6 +144,22 @@ def evaluate_attempt(
         flags = [f for f in expected_flags if f]
     flags = [f for f in flags if f]
 
+    # Gate-derived flags (audit D10 follow-up): when the harness holds no
+    # official value (platform instances), the coordinator's RUN_FINISHED flag
+    # is the only candidate. It is NOT trusted blindly — it enters the same
+    # evidence pipeline and must trace to a real tool output, or the verdict
+    # stays unsolved-with-reason and records unlinked_flags.
+    gate_derived = False
+    if not flags:
+        for event in events:
+            if str(event.get("event_type") or "") in ACCEPT_EVENT_TYPES:
+                payload = event.get("payload") or {}
+                if payload.get("solved") is True:
+                    value = str(payload.get("flag") or "")
+                    if value and value not in flags:
+                        flags.append(value)
+                        gate_derived = True
+
     verdict = Verdict()
 
     if not flags:

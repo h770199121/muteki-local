@@ -55,6 +55,18 @@ def _git_block() -> dict[str, Any]:
 def _worker_image_block() -> dict[str, Any]:
     ref = os.environ.get("MUTEKI_WORKER_IMAGE", "").strip()
     if not ref:
+        # The harness runs on the host where compose injects the var only into
+        # the control-plane container — fall back to the project .env (audit:
+        # env_binding must name the image even when captured host-side).
+        env_file = ROOT / ".env"
+        try:
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                if line.strip().startswith("MUTEKI_WORKER_IMAGE="):
+                    ref = line.split("=", 1)[1].strip()
+                    break
+        except OSError:
+            pass
+    if not ref:
         return {"status": "unavailable", "reason": "MUTEKI_WORKER_IMAGE not set"}
     try:
         proc = subprocess.run(

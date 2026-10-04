@@ -894,7 +894,14 @@ class CliSolver:
         self.solver_id = base
         self.insight = insight
         self.shared_graph = shared_graph
-        self.artifacts = artifacts or ArtifactStore(root=str(Path(tempfile.gettempdir()) / "muteki-cli-arts"))
+        self.artifacts = artifacts or ArtifactStore(root=str(
+            # D02: spill artifacts must outlive the worker process — a tempdir
+            # root dies with the container and the evidence chain with it. When
+            # a worker workdir is known, park the store inside the run workspace
+            # (same lifetime as the shared board); tempdir stays the fallback
+            # for non-workdir callers.
+            (Path(self._workdir) / "arts") if self._workdir
+            else (Path(tempfile.gettempdir()) / "muteki-cli-arts")))
         self.driver = driver or driver_for(engine)
         self.max_turns = max_turns
         self.timeout = timeout
@@ -2851,6 +2858,19 @@ class CliSolver:
                     self._pending_tool_calls.pop(match_idx)
                 result_text = raw[:600] if raw else ""
                 result_view: "dict[str, Any]" = {"condensed": result_text}
+                if len(raw or "") > len(result_text):
+                    # D02 (audit 5.7/D10 evidence chain): the event stream only
+                    # carries the head-600 condensed view; without a durable copy
+                    # the full output dies with the worker process and a gate-
+                    # accepted flag that lived in the tail can never be traced
+                    # back (run-21073/21567 unlinked evidence). Spill the FULL raw
+                    # into the ArtifactStore and reference it on the event.
+                    try:
+                        aid_spill = self.artifacts.put(raw)
+                        result_view["artifact_id"] = aid_spill
+                        result_view["artifact_bytes"] = len(raw)
+                    except OSError:
+                        pass
                 if spill_status is not None:
                     result_view["spill"] = spill_status
                 if result_text or spill_status is not None:

@@ -79,7 +79,7 @@ CHALLENGES = {
     # the platform submission (external), never from these entries.
     "be1_easysql": {
         "remote": True, "container": "", "image": "",
-        "name": "[GeekChallenge 2019] EasySQL", "target": "http://02bcb75f3d9ce4210b821c40.http-ctf2.dasctf.com/",
+        "name": "[GeekChallenge 2019] EasySQL", "target": "http://29131cf552639f86366f2911.http-ctf2.dasctf.com/",
         "description": "A website login page (username/password form). Log in and find the flag.",
         "flag": "",
     },
@@ -103,7 +103,7 @@ CHALLENGES = {
     },
     "be5_lovesql": {
         "remote": True, "container": "", "image": "",
-        "name": "[GeekChallenge 2019] LoveSQL", "target": "http://4b45949445762ae3f4de3665.http-ctf2.dasctf.com/",
+        "name": "[GeekChallenge 2019] LoveSQL", "target": "http://4cc736e1f755f2e99abb79e8.http-ctf2.dasctf.com/",
         "description": "A website login page (username/password form). Log in and find the flag.",
         "flag": "",
     },
