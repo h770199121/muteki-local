@@ -93,17 +93,19 @@ class ReductionCoverageTests(unittest.TestCase):
         self.assertTrue(r.telemetry_complete,
                         "rollup 与 solver 台账一致时应判定为完整")
 
-    def test_rollup_bigger_than_solver_is_incomplete(self):
+    def test_rollup_bigger_and_newer_is_authoritative_total(self):
+        # 批次 2 细化（audit 5.4）：rollup 序号更新且更大 = 超集（含
+        # challenge-scope 独有调用），是权威完整总量。
         events = [
             cost_event(1, "solver", "a", 100, 10),
             cost_event(2, "challenge", "run-x", 150, 15),
         ]
         r = reduce_usage(events)
-        self.assertFalse(r.telemetry_complete,
-                         "rollup 覆盖超出 solver 台账时不得宣称为完整总量")
-        self.assertTrue(r.incomplete_reasons)
+        self.assertEqual(r.basis, "challenge_rollup")
+        self.assertEqual(r.input_tokens, 150)
+        self.assertTrue(r.telemetry_complete)
 
-    def test_rollup_smaller_than_solver_is_incomplete(self):
+    def test_rollup_smaller_and_stale_is_incomplete(self):
         events = [
             cost_event(1, "solver", "a", 100, 10),
             cost_event(2, "challenge", "run-x", 50, 5),

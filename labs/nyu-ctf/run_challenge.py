@@ -24,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_verdict import evaluate_attempt  # noqa: E402
+from eval_env import freeze_eval_env  # noqa: E402
 from usage_reduce import (  # noqa: E402
     USAGE_STATS_VERSION,
     reduce_usage,
@@ -348,6 +349,10 @@ def run_static(ch: dict, args, password: str) -> int:
         "gate_accepted": verdict.gate_accepted,
         "external_verified": verdict.external_verified,
         "verdict_reason": verdict.reason,
+        "evidence_links": verdict.evidence_links,
+        "unlinked_flags": sorted(set(verdict.unlinked_flags)),
+        "verdict_attempt_matched": verdict.attempt_matched,
+        "env_binding": freeze_eval_env(budget_s=args.budget),
         "events": len(events),
     }
     print(json.dumps(result, ensure_ascii=False))
@@ -452,6 +457,10 @@ def main() -> int:
             "gate_accepted": verdict.gate_accepted,
             "external_verified": verdict.external_verified,
             "verdict_reason": verdict.reason,
+            "evidence_links": verdict.evidence_links,
+            "unlinked_flags": sorted(set(verdict.unlinked_flags)),
+            "verdict_attempt_matched": verdict.attempt_matched,
+            "env_binding": freeze_eval_env(budget_s=args.budget),
             "events": len(events),
         }
         print(json.dumps(result, ensure_ascii=False))

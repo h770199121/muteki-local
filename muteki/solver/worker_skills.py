@@ -9,8 +9,12 @@ projection when the Worker workspace is removed.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import shutil
+import sys
+import time
 from pathlib import Path
 
 
@@ -89,6 +93,26 @@ def stage_blackboard_skill(
     return staged
 
 
+def _hash_tree(path: Path) -> dict[str, str]:
+    """Content fingerprint of every file under a skill folder (audit 5.7/D06).
+
+    The manifest hashes make "current skill", "stale Worker copy" and "never
+    delivered" distinguishable after the fact, and let a future refresh prove a
+    candidate copy is system-generated and unmodified by the operator.
+    """
+    out: dict[str, str] = {}
+    for p in sorted(path.rglob("*")):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(path).as_posix()
+        digest = hashlib.sha256()
+        with p.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                digest.update(chunk)
+        out[rel] = digest.hexdigest()
+    return out
+
+
 def stage_extra_skills(
     workdir: str | Path,
     *,
@@ -102,8 +126,15 @@ def stage_extra_skills(
     COPIED into every project skill root of the Worker cwd — copies, not links,
     so they resolve identically for local and container Workers regardless of
     bind-mount semantics. Existing content is never overwritten (same policy as
-    the blackboard staging). A missing/unreadable source silently stages nothing:
-    extra skills are an operator convenience, never a launch blocker.
+    the blackboard staging). A missing/unreadable source stages nothing: extra
+    skills are an operator convenience, never a launch blocker.
+
+    Audit 5.7/D06: staging is no longer silent. Every outcome — copied,
+    pre-existing, failed, or source-unavailable — is recorded with per-file
+    SHA-256 fingerprints in ``<worker cwd>/skills-projection.json``, and copy
+    failures additionally print a stderr warning so operators see them live.
+    The manifest is overwritten by each projection attempt (it describes the
+    LAST staging for this cwd, not a history).
     """
 
     src_root = os.environ.get("MUTEKI_EXTRA_SKILLS_DIR", "").strip()
@@ -112,27 +143,76 @@ def stage_extra_skills(
     base = Path(src_root)
     try:
         candidates = sorted(p for p in base.iterdir() if p.is_dir())
-    except OSError:
+    except OSError as exc:
+        manifest = {
+            "source_dir": src_root,
+            "engine": str(engine), "container": bool(container),
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "status": "source_unavailable", "error": str(exc),
+            "entries": [], "failures": [],
+        }
+        _write_projection_manifest(root=Path(workdir).resolve(), manifest=manifest)
+        print(f"[worker_skills] extra skills source unavailable: {exc}",
+              file=sys.stderr, flush=True)
         return []
 
     root = Path(workdir).resolve()
     staged: list[str] = []
+    entries: list[dict] = []
+    failures: list[dict] = []
     for relative in project_skill_roots(engine):
         skills_root = root / relative
         for src in candidates:
             dest = skills_root / src.name
+            entry: dict = {
+                "skill": src.name, "root": relative,
+                "dest": str(dest), "source_dir": str(src),
+            }
             if dest.exists():
+                entry["status"] = "pre_existing"
+                try:
+                    entry["files_sha256"] = _hash_tree(dest)
+                except OSError as exc:
+                    entry["status"] = "failed"
+                    entry["error"] = f"hash pre-existing: {exc}"
+                    failures.append(entry)
+                entries.append(entry)
                 staged.append(str(dest))
                 continue
             skills_root.mkdir(parents=True, exist_ok=True)
             try:
                 shutil.copytree(src, dest)
+                entry["status"] = "copied"
+                entry["files_sha256"] = _hash_tree(dest)
                 staged.append(str(dest))
-            except OSError:
-                continue
+            except OSError as exc:
+                entry["status"] = "failed"
+                entry["error"] = str(exc)
+                failures.append(entry)
+                print(f"[worker_skills] FAILED to stage skill "
+                      f"{src.name} -> {dest}: {exc}", file=sys.stderr, flush=True)
+            entries.append(entry)
     if staged:
         _write_kb_pointer(root)
+    _write_projection_manifest(root=root, manifest={
+        "source_dir": src_root,
+        "engine": str(engine), "container": bool(container),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "status": "failed" if failures else "ok",
+        "entries": entries, "failures": failures,
+    })
     return staged
+
+
+def _write_projection_manifest(*, root: Path, manifest: dict) -> None:
+    """Persist the staging manifest into the Worker cwd (best-effort)."""
+    try:
+        (root / "skills-projection.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8")
+    except OSError as exc:
+        print(f"[worker_skills] could not write skills-projection.json: {exc}",
+              file=sys.stderr, flush=True)
 
 
 _KB_POINTER = """# Worker operating protocol (read this first — it exists because prior workers failed)

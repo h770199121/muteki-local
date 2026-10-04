@@ -76,6 +76,11 @@ class Verdict:
     execution_observed: bool = False
     rejected_candidates: int = 0
     multi_flag_satisfied: dict[str, bool] = field(default_factory=dict)
+    #: audit 5.3 follow-up: for each gate-accepted flag, the tool.result events
+    #: that actually contain the flag value — the traceable real-output source.
+    evidence_links: list[dict[str, Any]] = field(default_factory=list)
+    #: accepted flag values that could NOT be traced to any tool output
+    unlinked_flags: list[str] = field(default_factory=list)
 
     reason: str = ""
 
@@ -91,6 +96,8 @@ class Verdict:
             "execution_observed": self.execution_observed,
             "rejected_candidates": self.rejected_candidates,
             "multi_flag_satisfied": self.multi_flag_satisfied,
+            "evidence_links": self.evidence_links,
+            "unlinked_flags": sorted(set(self.unlinked_flags)),
             "reason": self.reason,
         }
 
@@ -147,12 +154,17 @@ def evaluate_attempt(
     exec_seqs: list[int] = []
     text_hits: list[str] = []
     tool_hits: list[str] = []
+    #: audit 5.3 follow-up: REAL tool outputs (tool.result only — tool.start is the
+    #: command input, text.delta is prose), for acceptance→output traceability.
+    tool_outputs: list[tuple[int, str]] = []
 
     for event in events:
         etype = str(event.get("event_type") or "")
         payload = event.get("payload") or {}
         blob = json.dumps(event, ensure_ascii=False)
 
+        if etype in {"tool.result", "tool_result"}:
+            tool_outputs.append((_event_seq(event), blob))
         if etype in EXECUTION_EVENT_TYPES or etype.startswith("tool."):
             exec_seqs.append(_event_seq(event))
 
@@ -170,6 +182,7 @@ def evaluate_attempt(
     verdict.candidate_found = bool(verdict.candidate_sources)
 
     # ---- pass 2: trusted acceptance, scoped to this attempt ----
+    accepted_values: list[str] = []
     for event in events:
         etype = str(event.get("event_type") or "")
         payload = event.get("payload") or {}
@@ -195,6 +208,7 @@ def evaluate_attempt(
 
         verdict.gate_accepted = True
         verdict.acceptance_sources.append(f"{etype}:{_event_seq(event)}")
+        accepted_values.extend(f for f in flags if _mentions(blob, f))
 
     # ---- pass 3: external judge ----
     if accepted_flags is not None:
@@ -209,6 +223,25 @@ def evaluate_attempt(
     if verdict.gate_accepted and not verdict.execution_observed:
         verdict.gate_accepted = False
         verdict.reason = "接受事件缺少工具执行证据，不予采信"
+
+    # ---- audit 5.3 follow-up: acceptance must trace to REAL tool output ----
+    # A flag.accepted event alone proves a decision, not an execution: the same
+    # flag value must be findable in at least one tool.result blob. Otherwise the
+    # acceptance is downgraded (an operator echo / board write cannot count).
+    if verdict.gate_accepted:
+        for value in dict.fromkeys(accepted_values):
+            hits = [seq for seq, blob in tool_outputs if _mentions(blob, value)]
+            if hits:
+                verdict.evidence_links.append({
+                    "flag": value, "event_type": "tool.result",
+                    "seqs": sorted(hits)[:5]})
+            else:
+                verdict.unlinked_flags.append(value)
+        if verdict.unlinked_flags:
+            verdict.gate_accepted = False
+            verdict.reason = (
+                "接受事件无法回查到包含 flag 的真实工具输出: "
+                f"{sorted(set(verdict.unlinked_flags))}")
 
     verdict.attempt_matched = verdict.gate_accepted or verdict.external_verified
     verdict.solved = bool(

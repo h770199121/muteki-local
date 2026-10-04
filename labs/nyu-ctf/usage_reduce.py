@@ -203,38 +203,54 @@ def reduce_usage(events: Iterable[dict[str, Any]]) -> UsageReduction:
         result.output_tokens = sum(int(v["output_tokens"]) for v in result.solver_totals.values())
         result.usd = sum(float(v["usd"]) for v in result.solver_totals.values())
 
-        # Rollup coverage (audit 5.4): compare BOTH token axes against the rollup.
-        #   rollup == solver  → the rollup exactly subsumes the ledgers: the two
-        #                        views agree, the total is complete.
-        #   rollup >  solver  → some usage (e.g. calls reported only at challenge
-        #                        scope) is missing from the solver sums: incomplete,
-        #                        and the rollup is the better-available estimate.
-        #   rollup <  solver  → solver usage recorded after the last rollup:
-        #                        incomplete the other way. A plain comparison flip
-        #                        cannot disambiguate mixed timelines, so both
-        #                        mismatch cases state WHICH view lags and keep the
-        #                        solver-ledger basis with the gap named explicitly.
+        # Rollup coverage (audit 5.4 follow-up: event ORDER matters, not just
+        # totals). Compare BOTH token axes plus the snapshot sequence numbers:
+        #   rollup totals == solver totals
+        #       → the two views agree; the total is complete either way.
+        #   rollup is the NEWER snapshot (max rollup seq >= max solver seq)
+        #       and rollup totals > solver totals
+        #       → the rollup subsumes the ledgers AND already includes usage
+        #         reported only at challenge scope (coordinator/planner calls):
+        #         it is the authoritative, complete total.
+        #   rollup newer but SMALLER
+        #       → inconsistent bookkeeping; incomplete, gap named.
+        #   rollup STALE (older seq) with any mismatch
+        #       → solver usage recorded after the last rollup; incomplete.
+        # A plain comparison flip cannot disambiguate the mixed-timeline cases;
+        # the seq comparison is what separates "stale rollup" from "superset".
         rollup_total_in = sum(int(v["input_tokens"]) for v in result.challenge_rollups.values())
         rollup_total_out = sum(int(v["output_tokens"]) for v in result.challenge_rollups.values())
         if result.challenge_rollups:
+            max_solver_seq = max(int(v["seq"]) for v in result.solver_totals.values())
+            max_rollup_seq = max(int(v["seq"]) for v in result.challenge_rollups.values())
+            rollup_newer = max_rollup_seq >= max_solver_seq
             if rollup_total_in == result.input_tokens and rollup_total_out == result.output_tokens:
                 result.solvers_covered_by_rollup = sorted(result.solver_totals)
-            elif rollup_total_in > result.input_tokens or rollup_total_out > result.output_tokens:
+            elif rollup_newer and (rollup_total_in > result.input_tokens
+                                   or rollup_total_out > result.output_tokens):
+                # The newer rollup is a superset (extra challenge-scope usage):
+                # report the ROLLUP as the complete authoritative total.
+                result.basis = "challenge_rollup"
+                result.input_tokens = rollup_total_in
+                result.output_tokens = rollup_total_out
+                result.usd = sum(float(v["usd"]) for v in result.challenge_rollups.values())
+                result.solvers_covered_by_rollup = sorted(result.solver_totals)
+            elif rollup_newer:
                 result.solvers_covered_by_rollup = sorted(result.solver_totals)
                 result.telemetry_complete = False
                 result.incomplete_reasons.append(
-                    "challenge rollup exceeds solver ledgers (rollup "
+                    "newer challenge rollup is SMALLER than solver ledgers (rollup "
                     f"in={rollup_total_in}/out={rollup_total_out} vs solver "
-                    f"in={result.input_tokens}/out={result.output_tokens}); usage "
-                    "reported only at challenge scope is missing from the solver "
-                    "sums, so the true total is at least the rollup")
+                    f"in={result.input_tokens}/out={result.output_tokens}); "
+                    "coverage is inconsistent, no single authoritative total")
             else:
                 result.telemetry_complete = False
                 result.incomplete_reasons.append(
-                    "challenge rollup lags solver ledgers (rollup "
+                    "challenge rollup is STALE (seq %d < solver seq %d; rollup "
                     f"in={rollup_total_in}/out={rollup_total_out} vs solver "
                     f"in={result.input_tokens}/out={result.output_tokens}); solver "
-                    "usage recorded after the last rollup is not covered by it")
+                    "usage recorded after the last rollup is not covered by it"
+                    % (max_rollup_seq, max_solver_seq))
     elif challenge_snaps:
         result.basis = "challenge_rollup"
         result.input_tokens = sum(int(v["input_tokens"]) for v in result.challenge_rollups.values())

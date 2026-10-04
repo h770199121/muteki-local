@@ -145,6 +145,50 @@ class CoverageHonestyTests(unittest.TestCase):
         self.assertFalse(r.telemetry_complete)
         self.assertTrue(r.incomplete_reasons)
 
+    def test_equal_rollup_and_solver_agree_is_complete(self):
+        # Audit 5.4 row 1: identical views must not be flagged incomplete.
+        events = [
+            cost_event(1, "solver", "a", 1000, 100),
+            cost_event(2, "challenge", "run-x", 1000, 100),
+        ]
+        r = reduce_usage(events)
+        self.assertEqual(r.input_tokens, 1000)
+        self.assertTrue(r.telemetry_complete)
+
+    def test_newer_bigger_rollup_is_the_authoritative_total(self):
+        # Audit 5.4 follow-up: a rollup with seq >= every solver snapshot that
+        # totals MORE than the solver ledgers is a superset (challenge-scope
+        # calls only) — it becomes the authoritative, complete total.
+        events = [
+            cost_event(1, "solver", "a", 1000, 100),
+            cost_event(5, "challenge", "run-x", 1500, 150),
+        ]
+        r = reduce_usage(events)
+        self.assertEqual(r.basis, "challenge_rollup")
+        self.assertEqual(r.input_tokens, 1500)
+        self.assertTrue(r.telemetry_complete)
+
+    def test_stale_rollup_is_named_as_stale(self):
+        # Rollup seq older than the newest solver snapshot → the honest reason is
+        # "stale", regardless of which side has the larger totals.
+        events = [
+            cost_event(1, "challenge", "run-x", 900, 90),
+            cost_event(3, "solver", "b", 5000, 500),
+        ]
+        r = reduce_usage(events)
+        self.assertFalse(r.telemetry_complete)
+        self.assertTrue(any("STALE" in x for x in r.incomplete_reasons))
+
+    def test_newer_smaller_rollup_is_flagged_inconsistent(self):
+        # rollup 是更新快照却更小 → 账目不一致（无法给出单一权威总量）
+        events = [
+            cost_event(5, "solver", "b", 5000, 500),
+            cost_event(6, "challenge", "run-x", 300, 30),
+        ]
+        r = reduce_usage(events)
+        self.assertFalse(r.telemetry_complete)
+        self.assertTrue(any("SMALLER" in x for x in r.incomplete_reasons))
+
     def test_no_events_is_explicitly_incomplete(self):
         r = reduce_usage([])
         self.assertEqual(r.basis, "none")
