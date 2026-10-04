@@ -6927,6 +6927,32 @@ class CliSolver:
                 return cleaned
         return ""
 
+    def effective_endpoint(self) -> str:
+        """The actual base_url this worker calls, for accounting (audit 5.5).
+
+        Locality of a model must be judged from the endpoint it is served on,
+        not from the model id: ``qwen3.8-27b`` on ``host.docker.internal`` is a
+        local worker with no API bill, while the same id behind a cloud gateway
+        is not. Same authority chain as :meth:`effective_model` — the bound
+        driver's profile (with its nested ``base``), else empty.
+        """
+        driver = getattr(self, "driver", None)
+        candidates: list[str] = []
+        for holder in (driver, getattr(driver, "base", None)):
+            profile = getattr(holder, "profile", None)
+            if isinstance(profile, dict):
+                base = profile.get("base_url")
+                if not isinstance(base, str) or not base.strip():
+                    inner = profile.get("base")
+                    if isinstance(inner, dict):
+                        base = inner.get("base_url")
+                candidates.append(str(base or ""))
+        for candidate in candidates:
+            cleaned = candidate.strip()
+            if cleaned:
+                return cleaned
+        return ""
+
     async def _stream_cost(self, res: CliResult) -> None:
         if self.cost is None:
             return
@@ -6959,6 +6985,7 @@ class CliSolver:
                     run_id=self.run_id,
                     solver_id=self.solver_id,
                     challenge_id=self.challenge.id,
+                    endpoint=self.effective_endpoint(),
                 )
                 self._stream_cost_flushed = True
                 return

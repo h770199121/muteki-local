@@ -493,11 +493,15 @@ class ControlReceiver:
             pass
         # Diagnostic for bootstrap auth failures (run-20671/20676/20681: token was
         # readable yet the Hello still failed — needs receiver-side evidence).
+        # Audit 5.6: NO credential material in logs — only lengths and whether the
+        # presented token matches the pending expectation.
         import sys as _sys
+        token_matches = bool(token) and bool(expected) and hmac.compare_digest(
+            token.encode(), expected.encode())
         print(
             f"[rcp] hello REJECTED run_id={run_id!r} error={error!r} "
-            f"token_prefix={token[:8]!r} expected_prefix={(expected or '')[:8]!r} "
             f"token_len={len(token)} expected_len={len(expected or '')} "
+            f"token_matches={token_matches} "
             f"live={bool(live)} pending_tokens={len(self._tokens)}",
             file=_sys.stderr, flush=True)
         conn.close()

@@ -558,6 +558,18 @@ class _CoordinatorLoopMixin:
                     task_prog_ckpt[t] = (fc, fl)
 
         async def _emit_bb(kind: str, **fields):
+            if kind == "worker_spawn_rejected":
+                # D04 (audit 5.1): production auto-dispatch rejections feed the same
+                # consecutive-failure governor as the operator path. Every
+                # worker_spawn_rejected emission in this loop happens BEFORE a
+                # worker task could be scheduled, so it is a pre-start failure by
+                # construction; capacity rejections are filtered inside the
+                # governor. This single hook replaces per-site wiring.
+                try:
+                    await self._note_worker_dispatch_failure(
+                        dict(fields), force_prestart=True)
+                except Exception:
+                    pass
             if self.bus is not None:
                 await self.bus.emit(Event(
                     event_type=EventType.BLACKBOARD_DELTA, run_id=self.run_id,
@@ -651,6 +663,16 @@ class _CoordinatorLoopMixin:
             # resolves that latch.
             while (tasks or self._operator_draining
                    or self._operator_paused or needs_new_information):
+                if getattr(self, "_dispatch_failure_limit_reached", False):
+                    # D04 (audit 5.1) terminal: the configured consecutive pre-start
+                    # failure streak is exhausted. Stop re-dispatching the same
+                    # broken configuration — cancel what is still alive and finish
+                    # with the governor's named cause instead of burning the wall
+                    # clock into a misleading "unsolved".
+                    for other in list(tasks):
+                        self._cancel_solver(task_solvers.get(other))
+                        other.cancel()
+                    break
                 # ContextResource is the durable outbox for exact operator
                 # continuations. A transient graph write in the control consumer
                 # must heal during this same live run, not wait for a process
@@ -838,6 +860,26 @@ class _CoordinatorLoopMixin:
                             force_reason_after_fruitless_interrupt = True
                         continue
                     except Exception as e:
+                        # D04 (audit 5.1): a worker task that died BEFORE any process
+                        # start (StartWorker rejected, container backend broken) is a
+                        # dispatch failure, not a runtime model failure — feed the
+                        # same governor as spawn rejections so a broken backend
+                        # stops the run instead of looping to the wall clock.
+                        try:
+                            from muteki.swarm.dispatch_failure_governor import (
+                                worker_is_prestart as _d04_prestart,
+                            )
+                            if (not was_fruitless_interrupt
+                                    and solver is not None
+                                    and _d04_prestart(solver)):
+                                await self._note_worker_dispatch_failure({
+                                    "reason": "worker_spawn_rejected",
+                                    "engine": str(engine),
+                                    "worker": str(getattr(solver, "solver_id", "") or ""),
+                                    "detail": f"worker exited before process start: {e}",
+                                }, force_prestart=True)
+                        except Exception:
+                            pass
                         per_solver[sid] = SolveOutcome(
                             False, None, 0, None, f"error: {e}")
                         if bool(getattr(solver, "_remote_start_uncertain", False)):

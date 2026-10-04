@@ -671,15 +671,15 @@ def ensure_container(run_id: str, host_workspace: str, *,
             _cleanup_bootstrap_dir(run_id, fallback=control_dir)
             bootstrap_root = os.path.dirname(control_dir)
             os.makedirs(bootstrap_root, mode=0o700, exist_ok=True)
-            # NOTE: when the data root lives on a Windows bind mount (Docker
-            # Desktop gRPC-FUSE), a 0700/0600 mode is enforced against EVERY
-            # accessor including container root after a Desktop restart — the
-            # supervisor then fails with "open token: permission denied"
-            # (run-20671/20676/20681). The token is one-shot and consumed at the
-            # first Hello, the receiver gates every link by it, and the port is
-            # compose-internal — so readable-by-all metadata on the host mount
-            # keeps the same practical boundary.
-            os.chmod(bootstrap_root, 0o755)
+            # COMPAT SCOPE (audit 5.6): the relaxed modes below exist for ONE
+            # deployment shape — a coordinator/worker pair whose shared data root
+            # lives on a Docker Desktop Windows bind mount (gRPC-FUSE), where mode
+            # metadata is enforced against every accessor (even container root)
+            # and the supervisor (uid kali) must be able to read AND unlink the
+            # token. On native Linux volumes 0700/0600 remains the better choice;
+            # _verify_bootstrap_token_visible() is the gate that proves whichever
+            # modes are in effect actually work for the worker identity BEFORE the
+            # run container starts — do not remove that check when tightening.
             # 0777 (not 0755): the supervisor (uid kali) must be able to UNLINK the
             # token after reading it — on an unlink failure it deliberately sends an
             # empty-token Hello rather than reuse a token it cannot consume, and the

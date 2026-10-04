@@ -63,12 +63,21 @@ from muteki.swarm.swarm_support import (
 
 
 class _DispatchReasonMixin:
-    async def _note_worker_dispatch_failure(self, fields: dict) -> None:
+    async def _note_worker_dispatch_failure(
+        self, fields: dict, *, force_prestart: bool = False,
+    ) -> None:
         """D04: count one pre-start dispatch rejection and stop when the streak is fatal.
 
         A real process-start receipt — not the mere creation of a task — clears the
         streak, so a worker that spawns and dies immediately does not keep the counter
-        alive on an otherwise healthy system.
+        alive on an otherwise healthy system. Each worker id is credited ONCE
+        (audit 5.1): a long-lived live solver must not re-clear the streak on every
+        later rejection, or the limit can never be reached.
+
+        ``force_prestart`` marks rejections the caller already knows happened before
+        any process could start (auto-dispatch spawn sites and pre-start worker
+        deaths report free-text reasons, not classified codes). Capacity rejections
+        ("healthy but full") are never counted either way.
         """
         from muteki.swarm.dispatch_failure_governor import (
             summarize_active_solvers,
@@ -82,28 +91,31 @@ class _DispatchReasonMixin:
             return
 
         # A worker that actually started proves the configuration works. The live
-        # solver registry (_live_solvers) is the real source of start receipts.
+        # solver registry (_live_solvers) is the real source of start receipts; each
+        # id is consumed at most once.
         solvers = [s for s in list(getattr(self, "_live_solvers", {}).values())
                    if s is not None]
         for solver in solvers:
             if not worker_is_prestart(solver):
-                previous = governor.record_start_observed(
-                    str(getattr(solver, "solver_id", "") or ""))
-                if previous:
-                    try:
-                        await self._emit_coord_bb(
-                            "worker_dispatch_recovered",
-                            worker=str(getattr(solver, "solver_id", "") or ""),
-                            previous_consecutive_failures=previous)
-                    except Exception:
-                        pass
+                sid = str(getattr(solver, "solver_id", "") or "")
+                if governor.credit_start(sid):
+                    previous = governor.consecutive
+                    if previous:
+                        try:
+                            await self._emit_coord_bb(
+                                "worker_dispatch_recovered",
+                                worker=sid,
+                                previous_consecutive_failures=previous)
+                        except Exception:
+                            pass
                 break
 
         reason = str(fields.get("reason") or fields.get("code") or "")
         engine = str(fields.get("engine") or "")
         detail = reason or "worker spawn rejected"
         reached = governor.record_failure(
-            worker="", engine=engine, detail=detail, reason=reason)
+            worker=str(fields.get("worker") or ""), engine=engine, detail=detail,
+            reason=reason, force=force_prestart)
         if not reached:
             return
 
@@ -168,15 +180,10 @@ class _DispatchReasonMixin:
             _finish_queue_item(cmd)
 
         async def _report(kind: str, **fields: Any) -> None:
-            # D04: a pre-start rejection feeds the consecutive-failure governor so a
-            # broken configuration stops being re-dispatched until the wall clock runs
-            # out. Runtime failures are deliberately NOT counted here — they belong to
-            # the fruitless-interrupt / reflection path.
-            if kind == "worker_spawn_rejected":
-                try:
-                    await self._note_worker_dispatch_failure(fields)
-                except Exception:
-                    pass
+            # D04: pre-start rejections are counted through the shared emit hook in
+            # the coordinator loop (_emit_bb routes worker_spawn_rejected into the
+            # governor), so operator and auto-dispatch paths cannot double count.
+            # The emit hook was verified to be THIS loop's _emit_bb closure.
             try:
                 await emit_bb(kind, **fields)
             except Exception:

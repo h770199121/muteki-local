@@ -1139,12 +1139,18 @@ class _FlagsBusMixin:
         # used to finish as a bare "runtime_failure" with no visible cause.
         failure_detail = ""
         if not solved:
-            error_reasons = [
-                str(getattr(o, "reason", "") or "")
-                for o in (per_solver or {}).values()
-                if str(getattr(o, "reason", "") or "").startswith("error:")
-            ]
-            failure_detail = error_reasons[-1] if error_reasons else ""
+            governor = getattr(self, "_dispatch_failure_governor", None)
+            if (getattr(self, "_dispatch_failure_limit_reached", False)
+                    and governor is not None and governor.limit_reached):
+                # D04 (audit 5.1): name the real dispatch cause, not a bare count.
+                failure_detail = governor.stop_reason()
+            if not failure_detail:
+                error_reasons = [
+                    str(getattr(o, "reason", "") or "")
+                    for o in (per_solver or {}).values()
+                    if str(getattr(o, "reason", "") or "").startswith("error:")
+                ]
+                failure_detail = error_reasons[-1] if error_reasons else ""
         await self._emit_run_finished(flag=finish_flag, solved=solved,
                                       reason=reason,
                                       failure_detail=failure_detail)

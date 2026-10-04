@@ -48,15 +48,23 @@ MODULE = ROOT / "muteki" / "swarm" / "dispatch_failure_governor.py"
 
 class PrestartClassificationTests(unittest.TestCase):
     def test_dispatch_rejections_are_prestart(self):
-        for reason in ("worker_spawn_rejected", "max_workers",
+        for reason in ("worker_spawn_rejected",
                        "unavailable_profile", "unknown_engine",
                        "process_input_illegal", "process_argv_too_large",
                        "worker_environment_unavailable"):
             with self.subTest(reason=reason):
                 self.assertTrue(is_prestart_rejection(reason))
 
+    def test_capacity_rejections_are_never_prestart(self):
+        # Audit 5.1: "healthy but full" must not share the fatal pre-start class.
+        for reason in ("max_workers", "profile_capacity",
+                       "worker_spawn_rejected:max_workers"):
+            with self.subTest(reason=reason):
+                self.assertFalse(is_prestart_rejection(reason))
+
     def test_qualified_reason_is_recognised(self):
-        self.assertTrue(is_prestart_rejection("worker_spawn_rejected:max_workers"))
+        self.assertTrue(
+            is_prestart_rejection("worker_spawn_rejected:unavailable_profile"))
 
     def test_runtime_failures_are_not_prestart(self):
         for reason in ("model_timeout", "target_unreachable", "tool_crash",
@@ -90,8 +98,45 @@ class StreakCountingTests(unittest.TestCase):
         gov = FailureGovernor(limit=3)
         gov.record_failure(worker="w", engine="dsh", detail="x", reason="unknown_engine")
         gov.record_failure(worker="w", engine="dsh", detail="运行期", reason="model_timeout")
-        gov.record_failure(worker="w", engine="dsh", detail="y", reason="max_workers")
+        gov.record_failure(worker="w", engine="dsh", detail="y", reason="worker_selection_failed")
         self.assertEqual(gov.consecutive, 2)
+
+    def test_capacity_rejection_never_counts_even_forced(self):
+        # Audit 5.1: a full-but-healthy system must not trip the fatal streak,
+        # no matter how the caller classifies the rejection.
+        gov = FailureGovernor(limit=2)
+        self.assertFalse(gov.record_failure(
+            worker="w", engine="dsh", detail="full", reason="max_workers",
+            force=True))
+        self.assertFalse(gov.record_failure(
+            worker="w", engine="dsh", detail="full", reason="profile_capacity",
+            force=True))
+        self.assertEqual(gov.consecutive, 0)
+        self.assertFalse(gov.limit_reached)
+
+    def test_force_counts_free_text_prestart_rejections(self):
+        # Auto-dispatch sites emit free-text reasons (the exception text), yet the
+        # rejection happened before any process could start — the caller proves
+        # that with force=True.
+        gov = FailureGovernor(limit=2)
+        self.assertFalse(gov.record_failure(
+            worker="w", engine="dsh", detail="fork/exec …: operation not permitted",
+            reason="StartWorker rejected: fork/exec /usr/bin/python3: "
+                   "operation not permitted",
+            force=True))
+        self.assertEqual(gov.consecutive, 1)
+
+    def test_start_credit_is_consumed_once_per_worker(self):
+        # Audit 5.1: a long-lived live solver must not re-clear the streak on
+        # every later rejection — only NEW start receipts do.
+        gov = FailureGovernor(limit=5)
+        self.assertTrue(gov.credit_start("w1"))
+        self.assertFalse(gov.credit_start("w1"))
+        gov.record_failure(worker="", engine="dsh", detail="x",
+                           reason="worker_spawn_rejected", force=True)
+        self.assertEqual(gov.consecutive, 1, "已入账的启动不应再次清零")
+        self.assertTrue(gov.credit_start("w2"))
+        self.assertEqual(gov.consecutive, 0, "新 worker 的启动凭据才清零")
 
     def test_disabled_governor_never_counts(self):
         gov = FailureGovernor(limit=0)
@@ -219,10 +264,21 @@ class WiringTests(unittest.TestCase):
     """The governor must actually be wired, not merely defined."""
 
     def test_dispatch_reports_prestart_rejections_to_it(self):
+        # Audit 5.1 rewiring: production auto-dispatch counts through the loop's
+        # _emit_bb hook (single point, operator path included); the old explicit
+        # _report call was removed to avoid double counting.
         source = (ROOT / "muteki" / "swarm" / "coordinator_dispatch.py").read_text(
             encoding="utf-8")
         self.assertIn("_note_worker_dispatch_failure", source)
-        self.assertIn('kind == "worker_spawn_rejected"', source)
+        loop_source = (ROOT / "muteki" / "swarm" / "coordinator_loop.py").read_text(
+            encoding="utf-8")
+        self.assertIn('kind == "worker_spawn_rejected"', loop_source)
+        self.assertIn("_note_worker_dispatch_failure", loop_source)
+        # 主循环必须把上限标志变成终态，而不是继续派发。
+        self.assertIn("_dispatch_failure_limit_reached", loop_source)
+        self.assertIn("break", loop_source)
+        # 收尾路径：pre-start 死亡也要进治理器。
+        self.assertIn("worker exited before process start", loop_source)
 
     def test_state_is_initialised_on_the_coordinator(self):
         source = (ROOT / "muteki" / "swarm" / "swarm.py").read_text(encoding="utf-8")

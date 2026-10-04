@@ -55,7 +55,6 @@ ENV_MAX_FAILURES = "MUTEKI_MAX_CONSECUTIVE_WORKER_FAILURES"
 #: pre-start rejection.
 PRESTART_REJECTIONS = frozenset({
     "worker_spawn_rejected",
-    "max_workers",
     "unavailable_profile",
     "worker_selection_failed",
     "unknown_engine",
@@ -66,6 +65,15 @@ PRESTART_REJECTIONS = frozenset({
     "model_catalog_missing",
     "container_unavailable",
     "container_setup_failed",
+})
+
+#: Rejections that mean "the system is healthy but currently FULL" (audit 5.1):
+#: counting them as fatal pre-start failures would stop runs on a working setup
+#: merely because the operator filled the worker pool. They are never counted,
+#: even when a caller forces pre-start classification.
+CAPACITY_REJECTIONS = frozenset({
+    "max_workers",
+    "profile_capacity",
 })
 
 
@@ -88,11 +96,32 @@ def is_prestart_rejection(reason: str | None) -> bool:
     code = str(reason or "").strip()
     if not code:
         return False
+    if is_capacity_rejection(code):
+        # "healthy but full" — including a qualified form whose tail is capacity
+        # (worker_spawn_rejected:max_workers) — is never a failure streak.
+        return False
     if code in PRESTART_REJECTIONS:
         return True
-    # A qualified code such as "worker_spawn_rejected:max_workers" also counts.
-    head = code.split(":", 1)[0].strip()
-    return head in PRESTART_REJECTIONS
+    # A qualified code such as "worker_spawn_rejected:unavailable_profile" also counts.
+    head, _, tail = code.partition(":")
+    if head.strip() in PRESTART_REJECTIONS:
+        if tail.strip() and is_capacity_rejection(tail):
+            return False
+        return True
+    return False
+
+
+def is_capacity_rejection(reason: str | None) -> bool:
+    """True when the rejection means 'healthy but full' — never a failure streak."""
+    code = str(reason or "").strip()
+    if not code:
+        return False
+    if code in CAPACITY_REJECTIONS:
+        return True
+    head, _, tail = code.partition(":")
+    if head.strip() in CAPACITY_REJECTIONS:
+        return True
+    return bool(tail.strip()) and tail.strip() in CAPACITY_REJECTIONS
 
 
 @dataclass
@@ -111,11 +140,29 @@ class FailureGovernor:
     limit_reached: bool = False
     #: Set once a start is observed, so a later failure starts a fresh streak.
     _start_seen: bool = False
+    #: Worker ids whose process-start receipt was already consumed (audit 5.1: a
+    #: long-lived live solver must not re-clear the streak on every later
+    #: rejection — only NEW start receipts count).
+    credited_workers: set[str] = field(default_factory=set)
     history: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def enabled(self) -> bool:
         return self.limit > 0
+
+    def credit_start(self, worker: str = "") -> bool:
+        """Consume one NEW process-start receipt. Returns True when it was new.
+
+        A worker id already credited returns False without touching the streak:
+        repeatedly observing the same live solver must not keep resetting the
+        failure counter, or the limit can never be reached.
+        """
+        sid = str(worker or "")
+        if not sid or sid in self.credited_workers:
+            return False
+        self.credited_workers.add(sid)
+        self.record_start_observed(sid)
+        return True
 
     def record_start_observed(self, worker: str = "") -> int:
         """Clear the streak on a real process start. Returns the previous streak.
@@ -132,11 +179,20 @@ class FailureGovernor:
         return previous
 
     def record_failure(self, *, worker: str, engine: str, detail: str,
-                       reason: str) -> bool:
-        """Count one pre-start rejection. Returns True when the limit is reached."""
+                       reason: str, force: bool = False) -> bool:
+        """Count one pre-start rejection. Returns True when the limit is reached.
+
+        ``force`` marks a rejection the caller has already proven happened before
+        any process could start (auto-dispatch spawn sites and pre-start worker
+        deaths emit free-text reasons, not the classified codes). Capacity
+        rejections are never counted, forced or not: a healthy-but-full system is
+        not a broken configuration (audit 5.1).
+        """
         if not self.enabled:
             return False
-        if not is_prestart_rejection(reason):
+        if is_capacity_rejection(reason):
+            return False
+        if not force and not is_prestart_rejection(reason):
             # Runtime failure: explicitly NOT counted. The fruitless-interrupt path
             # owns that case; counting it here would stop healthy-but-unlucky runs.
             return False
@@ -228,7 +284,9 @@ __all__ = [
     "DEFAULT_MAX_CONSECUTIVE_FAILURES",
     "ENV_MAX_FAILURES",
     "PRESTART_REJECTIONS",
+    "CAPACITY_REJECTIONS",
     "FailureGovernor",
+    "is_capacity_rejection",
     "is_prestart_rejection",
     "resolve_failure_limit",
     "summarize_active_solvers",

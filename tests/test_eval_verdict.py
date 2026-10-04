@@ -153,7 +153,15 @@ class ExternalVerdictTests(unittest.TestCase):
         v = evaluate_attempt(events, expected_flags=["flag{a}", "flag{b}"],
                              accepted_flags=["flag{a}"])
         self.assertEqual(v.multi_flag_satisfied, {"flag{a}": True, "flag{b}": False})
-        self.assertTrue(v.solved, "多 flag 需按题目要求分别计数，此处仅判已确认项")
+        # Audit 5.3: multi-flag completion requires EVERY expected flag to be
+        # externally confirmed — one of two must not score as solved.
+        self.assertFalse(v.solved, "多 flag 需全部确认才算解出")
+
+    def test_multi_flag_all_confirmed_solves(self):
+        events = [ev("tool.start", 1, name="bash"), tool_output(2, "x")]
+        v = evaluate_attempt(events, expected_flags=["flag{a}", "flag{b}"],
+                             accepted_flags=["flag{a}", "flag{b}"])
+        self.assertTrue(v.solved)
 
 
 class DegenerateTests(unittest.TestCase):

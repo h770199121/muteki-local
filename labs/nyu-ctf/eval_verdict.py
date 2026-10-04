@@ -199,7 +199,10 @@ def evaluate_attempt(
     # ---- pass 3: external judge ----
     if accepted_flags is not None:
         external = {f for f in accepted_flags if f}
-        verdict.external_verified = any(f in external for f in flags)
+        # Audit 5.3: multi-flag completion requires EVERY expected flag to be
+        # externally confirmed — one confirmed flag of two expected must not
+        # score the attempt as solved.
+        verdict.external_verified = bool(flags) and all(f in external for f in flags)
         verdict.multi_flag_satisfied = {f: f in external for f in flags}
 
     # ---- final: acceptance must be backed by real execution ----

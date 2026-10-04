@@ -78,16 +78,26 @@ _LOCAL_MODEL_MARKERS = (
 )
 
 
-def price_status(model: str, price: "ModelPrice | None") -> str:
+def price_status(model: str, price: "ModelPrice | None",
+                 endpoint: str | None = None) -> str:
     """Classify how a model's usage should be accounted.
 
     ``local_zero_api_cost``  a local endpoint — no API bill exists
     ``exact``                a known list price
     ``unpriced``             no price is known; do not invent one
+
+    Audit 5.5: when the caller knows the ACTUAL endpoint (base_url of the bound
+    profile), it is authoritative — a model id like ``qwen3.8-27b`` carries no
+    locality information and was previously classified by scanning the model
+    string alone. The model-string markers remain as a fallback for callers
+    that only have the name.
     """
     name = (model or "").strip().lower()
-    if not name:
+    ep = (endpoint or "").strip().lower()
+    if not name and not ep:
         return PRICE_STATUS_UNPRICED
+    if ep and any(marker in ep for marker in _LOCAL_MODEL_MARKERS):
+        return PRICE_STATUS_LOCAL
     if any(marker in name for marker in _LOCAL_MODEL_MARKERS):
         return PRICE_STATUS_LOCAL
     if price is None:
@@ -126,6 +136,22 @@ class Ledger:
         self.tokens += input_tokens + output_tokens
         self.calls += 1
         return c
+
+    def add_adjudicated(self, priced: "PricedUsage") -> float:
+        """Bump this ledger with an ALREADY-PRICED usage record (audit 5.5).
+
+        The dollar figure comes from price_usage's adjudication — a local or
+        unpriced model contributes 0 USD even when a table entry exists, while
+        tokens are still counted. Callers must not bypass this by calling add()
+        with a raw price: that is how a localhost model with a configured rate
+        ended up billed real dollars while price_usage reported zero.
+        """
+        self.usd += float(priced.usd)
+        self.input_tokens += int(priced.input_tokens)
+        self.output_tokens += int(priced.output_tokens)
+        self.tokens += int(priced.input_tokens) + int(priced.output_tokens)
+        self.calls += 1
+        return float(priced.usd)
 
 
 @dataclass
@@ -180,16 +206,19 @@ class CostController:
                                                           output_per_m=0.0)
 
     def price_usage(self, model: str, input_tokens: int,
-                    output_tokens: int) -> PricedUsage:
+                    output_tokens: int,
+                    endpoint: str | None = None) -> PricedUsage:
         """Price one usage record and report HOW it was priced.
 
         A04: the returned ``status`` is the authoritative signal:
         ``exact`` / ``local_zero_api_cost`` / ``unpriced``.  For ``unpriced`` the
         tokens are still counted, but ``usd`` is 0 because no honest dollar figure
         exists — callers should surface the status rather than reporting $0 as cost.
+        ``endpoint`` (audit 5.5) is the actual base_url of the bound profile when
+        the caller knows it; locality is judged from it first.
         """
         price = self.lookup_price(model)
-        status = price_status(model, price)
+        status = price_status(model, price, endpoint)
         if price is None or status == PRICE_STATUS_LOCAL:
             return PricedUsage(
                 input_tokens=int(input_tokens),
@@ -269,32 +298,32 @@ class CostController:
         run_id: str,
         challenge_id: Optional[str] = None,
         solver_id: Optional[str] = None,
+        endpoint: Optional[str] = None,
     ) -> float:
         """Record one LLM call's usage; emit COST_UPDATE; return its USD cost.
 
         A04: an unknown or local model still accumulates tokens, but its dollar
         figure is reported through ``pricing_status`` rather than being invented.
+        Audit 5.5: every ledger (global/challenge/solver/usage-window) is bumped
+        through ``add_adjudicated`` so the adjudicated status governs the dollar
+        amount everywhere — the previous code handed the raw price to Ledger.add,
+        which billed a localhost model at table rates even while price_usage
+        reported 0. ``endpoint`` is the caller's actual base_url when known.
         """
-        priced = self.price_usage(model, input_tokens, output_tokens)
-        price = self.lookup_price(model) or ModelPrice(input_per_m=0.0,
-                                                        output_per_m=0.0)
-        cost = self._global.add(price, input_tokens, output_tokens)
+        priced = self.price_usage(model, input_tokens, output_tokens, endpoint)
+        cost = self._global.add_adjudicated(priced)
         if priced.status == PRICE_STATUS_UNPRICED:
             # Count the gap instead of hiding it behind a fabricated rate.
             self.unpriced_calls += 1
         if challenge_id:
-            self._by_challenge.setdefault(challenge_id, Ledger()).add(
-                price, input_tokens, output_tokens
+            self._by_challenge.setdefault(challenge_id, Ledger()).add_adjudicated(
+                priced
             )
         if solver_id:
-            self._by_solver.setdefault(solver_id, Ledger()).add(
-                price, input_tokens, output_tokens
-            )
+            self._by_solver.setdefault(solver_id, Ledger()).add_adjudicated(priced)
         window_id = self._usage_context.get()
         if window_id is not None and window_id in self._usage_windows:
-            self._usage_windows[window_id].add(
-                price, input_tokens, output_tokens
-            )
+            self._usage_windows[window_id].add_adjudicated(priced)
         if self.bus is not None:
             # emit the most specific scope available
             if solver_id:

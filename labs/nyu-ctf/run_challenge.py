@@ -258,6 +258,25 @@ def _gate_solved(events: list[dict]) -> bool:
     )
 
 
+def _official_flags(ch: dict) -> list[str]:
+    raw = ch.get("flag")
+    raw_list = [raw] if isinstance(raw, str) else list(raw or [])
+    return [f for f in raw_list if f]
+
+
+def _eval_solved(verdict, gate_solved: bool, official: list[str]) -> bool:
+    """A02 (audit 5.3): the official-flag comparison stays authoritative.
+
+    The gate verdict is ONLY a fallback for platform challenges whose official
+    value we do not hold — otherwise a run whose gate accepted the WRONG flag
+    (e.g. flag{wrong} vs flag{expected}) would be scored as solved. When an
+    official flag exists, `verdict.solved` already covers the legitimate case:
+    a gate acceptance of the official value necessarily makes the flag string
+    appear in accepted evidence, which `evaluate_attempt` requires.
+    """
+    return verdict.solved if official else gate_solved
+
+
 def run_static(ch: dict, args, password: str) -> int:
     """File-based challenge: no target container; handouts attached by path."""
     t0 = time.time()
@@ -310,12 +329,13 @@ def run_static(ch: dict, args, password: str) -> int:
     # string merely appearing in text (challenge text, a hint, or a guess).
     verdict = evaluate_attempt(events, expected_flags=ch["flag"])
     gate_solved = _gate_solved(events)
+    official = _official_flags(ch)
     tool_calls = sum(1 for e in events
                      if (e.get("event_type") or "") in ("tool.start", "tool_start"))
     result = {
         "tag": args.tag, "engine": args.engine, "challenge": args.challenge,
         "run_id": run_id, "finished": finished,
-        "solved": verdict.solved or gate_solved,
+        "solved": _eval_solved(verdict, gate_solved, official),
         "gate_solved": gate_solved,
         "elapsed_s": round(elapsed, 1), "wall_budget_s": args.budget,
         "tool_calls": tool_calls,
@@ -413,12 +433,13 @@ def main() -> int:
         usage = reduce_usage(events)
         verdict = evaluate_attempt(events, expected_flags=ch["flag"])
         gate_solved = _gate_solved(events)
+        official = _official_flags(ch)
         tool_calls = sum(1 for e in events
                          if (e.get("event_type") or "") in ("tool.start", "tool_start"))
         result = {
             "tag": args.tag, "engine": args.engine, "challenge": args.challenge,
             "run_id": run_id, "finished": finished,
-            "solved": verdict.solved or gate_solved,
+            "solved": _eval_solved(verdict, gate_solved, official),
             "gate_solved": gate_solved,
             "elapsed_s": round(elapsed, 1), "wall_budget_s": args.budget,
             "tool_calls": tool_calls,
