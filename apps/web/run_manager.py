@@ -897,6 +897,51 @@ class RunManager:
             run.flags = list(s.get("flags") or ([run.flag] if run.flag else []))
             run.expected_flags = int(s.get("expected_flags") or 1)
             run.multi_flag = bool(s.get("multi_flag", False))
+            # Batch 5C (audit §4.3): durable interrupted reconciliation for the
+            # NEWEST unclosed generation of a Protocol 1 run. A control-plane
+            # restart mid-run used to freeze the JSONL without any terminal
+            # event (run-23532: 12 events, no closure) — the deck then showed a
+            # phantom "running" state forever. Append an idempotent synthetic
+            # run.finished(reason="interrupted", generation=<gen>) via
+            # append_if_absent_sync: a second restart is a no-op, an already
+            # closed generation is skipped, and re-opening via the existing
+            # resolve() path still works (it re-runs the Swarm and appends its
+            # own events). Protocol 2 lifecycle stays canonical elsewhere.
+            protocol1_gen = int(s.get("execution_generation") or 0)
+            if (protocol1_owned and run.started and not bool(s.get("finished"))
+                    and protocol1_gen > 0
+                    and protocol1_gen not in run.terminal_generations):
+                detail = (f"control plane restarted while generation "
+                          f"{protocol1_gen} was active; use 继续/resolve to "
+                          f"re-open the run")
+                try:
+                    appended = store.append_if_absent_sync(
+                        Event(
+                            event_type=EventType.RUN_FINISHED,
+                            run_id=rid,
+                            payload={
+                                "flag": None,
+                                "flags": list(run.flags),
+                                "expected_flags": run.expected_flags,
+                                "multi_flag": run.multi_flag,
+                                "solved": False,
+                                "reason": "interrupted",
+                                "failure_detail": detail,
+                                "execution_generation": protocol1_gen,
+                            },
+                        ),
+                        identity_field="failure_detail",
+                        identity=detail,
+                    )
+                    if appended:
+                        # Keep the in-memory handle and the log consistent: the
+                        # synthetic closure also retires the generation.
+                        run.terminal_generations.add(protocol1_gen)
+                except Exception:
+                    # Reconciliation is best-effort: a projection conflict or an
+                    # unreadable log must not break rail hydration for OTHER
+                    # runs. The in-memory force-settle above still applies.
+                    pass
             # a rehydrated run is never live → it can't be paused or mid-run.
             run.paused = False
             # order persisted runs by recency of activity (newest gets the highest

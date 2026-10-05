@@ -118,7 +118,10 @@ def replay(source: Path, sessions: Path, out: Path,
             # the gate for replay rows whose flag was empty and to the evidence
             # verdict otherwise. We conservatively report BOTH and mark the
             # basis; consumers must not mix them.
-            verdict = evaluate_attempt(events, expected_flags=[])
+            verdict = evaluate_attempt(
+                events, expected_flags=[],
+                attempt=((row.get("env_binding") or {}).get("attempt")),
+                artifacts_dir=str(sessions / run_id / "workspace" / "arts"))
             record = {
                 "tag": row.get("tag"), "engine": row.get("engine"),
                 "challenge": row.get("challenge"), "run_id": run_id,

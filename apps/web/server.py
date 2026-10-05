@@ -1517,6 +1517,22 @@ def create_app(manager: Optional[RunManager] = None) -> FastAPI:
         manifest["notes"].append(
             "screenshots empty: collected by the HOST collector "
             "(labs/nyu-ctf/writeup_evidence.py) while the target is alive")
+        # Batch 5B (audit §4.2): merge, don't clobber — a prior HOST collector
+        # run may have recorded screenshots; losing them would delete evidence.
+        existing_path = mgr.workspace_dir(run_id) / "writeup-evidence.json"
+        if existing_path.is_file():
+            try:
+                prior = json.loads(existing_path.read_text(encoding="utf-8"))
+                if prior.get("screenshots"):
+                    manifest["screenshots"] = prior["screenshots"]
+                    manifest["notes"].append(
+                        f"screenshots merged from previous manifest "
+                        f"({len(prior['screenshots'])} entries)")
+                for note in prior.get("notes") or []:
+                    if note not in manifest["notes"]:
+                        manifest["notes"].append(note)
+            except (OSError, ValueError):
+                pass
         out = mgr.workspace_dir(run_id) / "writeup-evidence.json"
         out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
                        encoding="utf-8")

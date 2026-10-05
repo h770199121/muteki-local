@@ -1391,6 +1391,33 @@ def build_standby_driver(cmd: dict[str, Any], mgr: "RunManager | None" = None) -
         worker_root = root / "workers"
         worker_root.mkdir(parents=True, exist_ok=True)
 
+        # Batch 5B (audit §4.2): the PRODUCT "生成复盘" entry must have an
+        # evidence manifest ready before the writeup worker runs — otherwise the
+        # deterministic appendix has nothing to append and the UI report stays
+        # bare. Build it from the durable event stream when absent (the host
+        # collector may have already written one with screenshots — keep it).
+        if action == "writeup" and not (root / "writeup-evidence.json").is_file():
+            try:
+                import json as _json
+                from muteki.solver.writeup_evidence import (
+                    build_evidence_manifest,
+                )
+                _events: list[dict] = []
+                async for ev in run.store.replay(run.run_id):
+                    _events.append(
+                        ev.model_dump() if hasattr(ev, "model_dump")
+                        else dict(ev))
+                manifest = build_evidence_manifest(_events, workspace=root)
+                manifest["notes"].append(
+                    "screenshots: collected by the HOST collector "
+                    "(labs/nyu-ctf/writeup_evidence.py) while the target is "
+                    "alive; this product entry has no browser")
+                (root / "writeup-evidence.json").write_text(
+                    _json.dumps(manifest, ensure_ascii=False, indent=2),
+                    encoding="utf-8")
+            except Exception:
+                pass  # evidence is best-effort — never block the writeup
+
         winner = mgr.load_winner_continuation(run.run_id)
 
         # Rebuild the Challenge from coordinator-owned state. Older runs recover
@@ -1903,10 +1930,11 @@ def build_standby_driver(cmd: dict[str, Any], mgr: "RunManager | None" = None) -
             # writeup prompt forbids the model from running tools, so evidence is
             # appended HOST-SIDE and cannot be invented or omitted by the model.
             artifact_path = ""
-            if action == "writeup" and getattr(out, "reply", ""):
+            final_text = str(getattr(out, "reply", "") or "")
+            if action == "writeup" and final_text:
                 try:
                     writeup_path = root / "writeup.md"
-                    body = str(out.reply)
+                    body = final_text
                     evidence_path = root / "writeup-evidence.json"
                     if evidence_path.is_file():
                         try:
@@ -1922,6 +1950,10 @@ def build_standby_driver(cmd: dict[str, Any], mgr: "RunManager | None" = None) -
                                      f"{type(exc).__name__}: {exc}\n")
                     writeup_path.write_text(body, encoding="utf-8")
                     artifact_path = str(writeup_path)
+                    # Batch 5B: the UI consumes followup.completed.text — it
+                    # MUST be the SAME final body that was saved to disk
+                    # (audit: disk report and interface report diverged).
+                    final_text = body
                 except Exception as exc:
                     raise RuntimeError("writeup artifact could not be persisted") from exc
             if action in {"ask", "writeup"}:
@@ -1933,7 +1965,7 @@ def build_standby_driver(cmd: dict[str, Any], mgr: "RunManager | None" = None) -
                     payload={
                         "followup_id": runtime_cmd.get("followup_id") or "",
                         "kind": action,
-                        "text": getattr(out, "reply", "") or "",
+                        "text": final_text,
                         "artifact_path": artifact_path,
                     },
                 ))

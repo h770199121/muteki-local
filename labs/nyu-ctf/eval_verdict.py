@@ -27,9 +27,15 @@ Run:  python -X utf8 -B -m unittest tests.test_eval_verdict -v
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Iterable, Mapping
+
+#: Batch-5A: bumped whenever acceptance/evidence semantics change, so archived
+#: and freshly-produced verdict rows are never compared across semantics.
+VERDICT_VERSION = 3
 
 # Event types that indicate the worker actually executed something.
 EXECUTION_EVENT_TYPES = frozenset({
@@ -86,6 +92,7 @@ class Verdict:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "verdict_version": VERDICT_VERSION,
             "solved": self.solved,
             "candidate_found": self.candidate_found,
             "gate_accepted": self.gate_accepted,
@@ -156,12 +163,49 @@ def _event_generation(payload: dict[str, Any]) -> int | None:
         return None
 
 
+def _artifact_id(payload: dict[str, Any]) -> str:
+    """Artifact reference from a tool.result: top-level or nested in result.
+
+    Batch-5A: the D02 spill originally published the id inside the result view;
+    batch-4-3 moved it to the event top level. Accept both so pre/post streams
+    replay under one evaluator.
+    """
+    ref = str(payload.get("artifact_id") or "").strip()
+    if ref:
+        return ref
+    result = payload.get("result")
+    if isinstance(result, dict):
+        return str(result.get("artifact_id") or "").strip()
+    return ""
+
+
+def _read_artifact(artifacts_dir: Path | None,
+                   artifact_id: str) -> tuple[str | None, str]:
+    """Read one referenced artifact. Returns (content, sha256); (None, "") when
+    the file is absent/unreadable — a missing referenced file is recorded, not
+    treated as evidence."""
+    if not artifacts_dir or not artifact_id:
+        return None, ""
+    path = Path(artifacts_dir) / f"{artifact_id}.txt"
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        path2 = Path(artifacts_dir) / artifact_id
+        try:
+            content = path2.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return None, ""
+    return content, hashlib.sha256(
+        content.encode("utf-8", errors="replace")).hexdigest()
+
+
 def evaluate_attempt(
     events: Iterable[dict[str, Any]],
     *,
     expected_flags: str | Iterable[str],
     attempt: int | None = None,
     accepted_flags: Iterable[str] | None = None,
+    artifacts_dir: str | Path | None = None,
 ) -> Verdict:
     """Decide whether an attempt genuinely solved the challenge.
 
@@ -170,6 +214,13 @@ def evaluate_attempt(
     ``attempt``          when given, only acceptance evidence carrying this
                         execution/attempt generation is trusted.
     ``accepted_flags``   externally confirmed flags, if an external judge ran.
+    ``artifacts_dir``    workspace/arts of the run (batch-5A): when a
+                        tool.result references an artifact whose inline
+                        (condensed) text was truncated, the referenced file is
+                        read to recover the full output — evidence links then
+                        point at the artifact with its SHA-256. Directory
+                        scans are NOT evidence: only artifacts referenced by
+                        an event count.
     """
     events = list(events)
 
@@ -207,10 +258,11 @@ def evaluate_attempt(
     tool_hits: list[str] = []
     #: audit 5.3 follow-up + batch-4-1: REAL tool outputs (tool.result only —
     #: tool.start is the command input, text.delta is prose), as
-    #: (seq, OUTPUT-ONLY text, generation) for acceptance→output traceability.
-    #: Command text is deliberately excluded: a flag typed into a command (e.g.
-    #: submit-flag 'CTF2{…}') is worker input, not target response.
-    tool_outputs: list[tuple[int, str, int | None]] = []
+    #: (seq, OUTPUT-ONLY text, generation, artifact_id) for
+    #: acceptance→output traceability. Command text is deliberately excluded:
+    #: a flag typed into a command (e.g. submit-flag 'CTF2{…}') is worker
+    #: input, not target response.
+    tool_outputs: list[tuple[int, str, int | None, str]] = []
 
     for event in events:
         etype = str(event.get("event_type") or "")
@@ -220,7 +272,7 @@ def evaluate_attempt(
         if etype in {"tool.result", "tool_result"}:
             tool_outputs.append((
                 _event_seq(event), _output_text(payload),
-                _event_generation(payload)))
+                _event_generation(payload), _artifact_id(payload)))
         if etype in EXECUTION_EVENT_TYPES or etype.startswith("tool."):
             exec_seqs.append(_event_seq(event))
 
@@ -238,7 +290,6 @@ def evaluate_attempt(
     if attempt is not None:
         tool_outputs = [row for row in tool_outputs
                         if row[2] is None or row[2] == int(attempt)]
-
     verdict.execution_observed = bool(exec_seqs)
     verdict.candidate_sources = text_hits + tool_hits
     verdict.candidate_found = bool(verdict.candidate_sources)
@@ -309,27 +360,65 @@ def evaluate_attempt(
         verdict.reason = "接受事件缺少工具执行证据，不予采信"
 
     # ---- audit 5.3 follow-up: acceptance must trace to REAL tool output ----
-    # A flag.accepted event alone proves a decision, not an execution: the same
-    # flag value must be findable in at least one tool.result OUTPUT (whitelist
-    # fields only — see _output_text). Otherwise the acceptance is downgraded
-    # (an operator echo / board write cannot count).
+    # A flag.accepted event alone proves a decision, not an execution. The flag
+    # value must trace to a tool.result OUTPUT with:
+    #   * inline evidence — the flag inside the whitelist output fields, OR
+    #   * artifact evidence — the event references an artifact whose FILE
+    #     content contains the flag (batch-5A: condensed output is truncated
+    #     head-600; the tail lives in workspace/arts/<id>.txt).
+    # Temporal association (batch-5A): the output must precede the acceptance
+    # event — an output appearing only AFTER the terminal event cannot be the
+    # source of that acceptance. Directory scans are not evidence: only
+    # artifacts referenced by an event are read.
+    gen_uncertain = False
     if verdict.gate_accepted:
+        artifacts_dir_path = Path(artifacts_dir) if artifacts_dir else None
+        bound_seq = min((seq for _et, seq, _p, _g in acceptance_rows),
+                        default=0)
         for value in dict.fromkeys(accepted_values):
-            hits = [seq for seq, text, _gen in tool_outputs
-                    if _mentions(text, value)]
-            if hits:
+            inline_hits: list[int] = []
+            missing_refs: list[str] = []
+            for seq, text, gen, aid in tool_outputs:
+                if seq > bound_seq:
+                    continue
+                if _mentions(text, value):
+                    inline_hits.append(seq)
+                    if attempt is not None and gen is None:
+                        gen_uncertain = True
+                elif aid:
+                    content, sha = _read_artifact(artifacts_dir_path, aid)
+                    if content is None:
+                        missing_refs.append(aid)
+                    elif _mentions(content, value):
+                        verdict.evidence_links.append({
+                            "flag": value, "event_type": "artifact",
+                            "seqs": [seq], "artifact_id": aid,
+                            "sha256": sha})
+                        break
+            if inline_hits:
                 verdict.evidence_links.append({
                     "flag": value, "event_type": "tool.result",
-                    "seqs": sorted(hits)[:5]})
-            else:
-                verdict.unlinked_flags.append(value)
+                    "seqs": sorted(inline_hits)[:5]})
+                continue
+            artifact_hit = any(
+                l.get("flag") == value
+                and l.get("event_type") == "artifact"
+                for l in verdict.evidence_links)
+            if artifact_hit:
+                continue
+            verdict.unlinked_flags.append(value)
+            if missing_refs:
+                verdict.evidence_links.append({
+                    "flag": value, "event_type": "missing_artifact",
+                    "artifact_ids": sorted(set(missing_refs))[:5]})
         if verdict.unlinked_flags:
             verdict.gate_accepted = False
             verdict.reason = (
-                "接受事件无法回查到包含 flag 的真实工具输出: "
+                "接受事件无法回查到包含 flag 的真实工具输出或其引用的产物: "
                 f"{sorted(set(verdict.unlinked_flags))}")
 
-    verdict.attempt_matched = verdict.gate_accepted or verdict.external_verified
+    verdict.attempt_matched = (verdict.gate_accepted
+                               or verdict.external_verified) and not gen_uncertain
     verdict.solved = bool(
         (verdict.gate_accepted and verdict.execution_observed)
         or verdict.external_verified

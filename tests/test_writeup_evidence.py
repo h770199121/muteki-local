@@ -65,6 +65,37 @@ class ManifestTests(unittest.TestCase):
         m = build_evidence_manifest(events, workspace=self.workspace)
         self.assertEqual(m["key_pages"][0]["url"], "http://t.local/index.php?x=1")
 
+    def test_cross_worker_interleave_pairs_correctly(self):
+        # 批次 5E（audit §4.4）：A/B 两 worker 交错请求（A 发、B 发、A 回、B 回）
+        # 必须 per-worker FIFO 配对——全局队列会得到 a→B、b→A 的错配。
+        events = [
+            {"event_type": "tool.start", "seq": 1, "solver_id": "cli-a",
+             "payload": {"tool": "bash: curl -s http://a.test/"}},
+            {"event_type": "tool.start", "seq": 2, "solver_id": "cli-b",
+             "payload": {"tool": "bash: curl -s http://b.test/"}},
+            {"event_type": "tool.result", "seq": 3, "solver_id": "cli-a",
+             "payload": {"result": {"condensed": "<html>page A</html>"}}},
+            {"event_type": "tool.result", "seq": 4, "solver_id": "cli-b",
+             "payload": {"result": {"condensed": "<html>page B</html>"}}},
+        ]
+        m = build_evidence_manifest(events, workspace=self.workspace)
+        by_seq = {i["seq"]: i for i in m["http_interactions"]}
+        self.assertIn("a.test", by_seq[3]["command"])
+        self.assertIn("b.test", by_seq[4]["command"])
+
+    def test_post_pages_marked_not_replayable(self):
+        # 批次 5E：POST/会话态页面标注 replay=false 与原因，不假扮 GET 重放。
+        events = [
+            {"event_type": "tool.start", "seq": 1, "solver_id": "cli-a",
+             "payload": {"tool": "bash: curl -s -X POST --data 'u=x' "
+                                  "http://t.local/login"}},
+            {"event_type": "tool.result", "seq": 2, "solver_id": "cli-a",
+             "payload": {"result": {"condensed": "<html>success</html>"}}},
+        ]
+        m = build_evidence_manifest(events, workspace=self.workspace)
+        self.assertEqual(m["key_pages"][0]["method"], "POST")
+        self.assertFalse(m["key_pages"][0]["replay"])
+
     def test_append_section_with_screenshots(self):
         m = build_evidence_manifest([], workspace=self.workspace)
         m["screenshots"] = [

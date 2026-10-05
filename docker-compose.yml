@@ -94,6 +94,11 @@ services:
       MUTEKI_WORKER_CPUS: "${MUTEKI_WORKER_CPUS:-}"
       MUTEKI_WORKER_PIDS_LIMIT: "${MUTEKI_WORKER_PIDS_LIMIT:-}"
       MUTEKI_WORKER_RESOURCES_REQUIRED: "${MUTEKI_WORKER_RESOURCES_REQUIRED:-0}"
+      # Batch 5D: directed D04 fault-injection switch (TEST ONLY — never set in
+      # production). Rewrites the worker launch argv to a nonexistent
+      # interpreter AFTER preflight, so every process start fails and the
+      # main-loop consecutive-failure governor can be observed for real.
+      MUTEKI_D04_INJECT_BAD_INTERPRETER: "${MUTEKI_D04_INJECT_BAD_INTERPRETER:-0}"
     restart: unless-stopped
 
   ui:

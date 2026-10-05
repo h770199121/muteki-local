@@ -65,25 +65,48 @@ def _extract_url(command: str) -> str:
 
 
 def _tool_interactions(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Pair tool.start commands with tool.result outputs in FIFO order."""
-    pending: list[str] = []
+    """Pair tool.start commands with tool.result outputs.
+
+    Batch 5E (audit §4.4): pairing is PER WORKER (solver_id) FIFO — a global
+    queue mis-pairs interleaved multi-worker requests (A→response B). The
+    solver_id travels top-level on the event; unknown senders share a fallback
+    queue so legacy shapes still pair.
+    """
+    pending: dict[str, list[str]] = {}
+    fallback: list[str] = []
     out: list[dict[str, Any]] = []
+
+    def _pop(queue_key: str) -> str:
+        queue = pending.get(queue_key)
+        if queue:
+            return queue.pop(0)
+        if fallback:
+            return fallback.pop(0)
+        return ""
+
     for event in events:
         etype = str(event.get("event_type") or "")
         payload = event.get("payload") or {}
+        solver = str(event.get("solver_id") or "") or "_anon"
         if etype == "tool.start":
             command = str(payload.get("tool") or "")
             command = command[6:] if command.startswith("bash: ") else command
-            pending.append(command)
+            pending.setdefault(solver, []).append(command)
+            fallback.append(command)
         elif etype == "tool.result":
-            command = pending.pop(0) if pending else ""
+            command = _pop(solver)
             text = _output_text(payload)
             if not text:
                 continue
+            method = ("POST" if re.search(
+                r"-X\s*POST|--data(?:-raw)?(?:\s|=)|-d\s", command or "")
+                else "GET")
             out.append({
                 "seq": int(event.get("seq") or 0),
+                "worker": solver,
                 "command": command[:500],
                 "url": _extract_url(command),
+                "method": method,
                 "output_head": text[:2000],
                 "output_len": len(text),
                 "is_http": bool(_HTTPISH_RE.search(text)),
@@ -125,9 +148,19 @@ def build_evidence_manifest(
         if item["url"] in seen_urls:
             continue
         seen_urls.add(item["url"])
+        is_post = item.get("method") == "POST"
         key_pages.append({
             "url": item["url"],
             "seq": item["seq"],
+            "worker": item.get("worker"),
+            "method": item.get("method") or "GET",
+            # Batch 5E (audit §4.4): a POST/session-state page cannot be
+            # honestly reproduced by a bare GET replay — mark it as such
+            # instead of pretending the screenshot is the original success.
+            "replay": not is_post,
+            "replay_note": ("POST/session-dependent — GET replay is a "
+                            "best-effort view, NOT the original success "
+                            "request" if is_post else ""),
             "reason": ("flag in response" if flag_value and (
                 flag_value in item["output_head"]) else "http page"),
         })

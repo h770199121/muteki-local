@@ -128,8 +128,27 @@ def collect(*, run_id: str, sessions: Path, shots: int = 4,
     if not browser:
         manifest["notes"].append("browser replay disabled (--no-browser)")
     else:
-        pages = manifest["key_pages"][:shots]
+        # Batch 5E: only GET-replayable pages get screenshots — POST/session
+        # pages are recorded with their reason instead of a misleading image.
+        pages = [p for p in manifest["key_pages"][:shots * 2]
+                 if p.get("replay", True)][:shots]
+        skipped_post = [p for p in manifest["key_pages"]
+                        if not p.get("replay", True)]
+        for p in skipped_post:
+            notes.append(
+                f"POST/会话态页面不截图重放: {p.get('url')} "
+                f"(seq={p.get('seq')}) — 原始成功请求不可由 GET 还原")
         shots_dir = workspace / "writeup-shots"
+        # Batch 5E (audit §4.4): persist the manifest after EVERY screenshot —
+        # a total-timeout kill must not lose already-collected evidence.
+        out_path = workspace / "writeup-evidence.json"
+
+        def _save() -> None:
+            out_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2),
+                encoding="utf-8")
+
+        _save()
         for i, page in enumerate(pages, 1):
             name = f"{i:02d}-seq{page['seq']}.png"
             ok, detail = _screenshot(page["url"], shots_dir / name, timeout_s)
@@ -146,6 +165,7 @@ def collect(*, run_id: str, sessions: Path, shots: int = 4,
                     f"截图失败 {page['url']}: {detail}")
                 page["replay"] = False
                 page["replay_error"] = detail
+            _save()
         skipped = len(manifest["key_pages"]) - len(pages)
         if skipped > 0:
             notes.append(f"{skipped} key pages beyond the --shots limit were "

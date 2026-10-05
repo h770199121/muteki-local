@@ -1005,6 +1005,15 @@ def _containerize_argv(driver_name: str, argv: list[str]) -> list[str]:
         out[0] = bin_in_container or os.path.basename(out[0])
     if driver_name == "dsh" and len(out) >= 2:
         out[1] = "/opt/muteki/deepseek_harness_worker.py"
+        # Batch 5D (audit §4.5): directed D04 fault-injection switch (TEST
+        # ONLY). Rewrites the harness interpreter to a nonexistent path AFTER
+        # preflight — every worker process start then fails pre-start, which is
+        # the exact shape the main-loop consecutive-failure governor must
+        # absorb. Never set in production.
+        import os as _os
+        if _os.environ.get("MUTEKI_D04_INJECT_BAD_INTERPRETER", "").strip() in {
+                "1", "true", "TRUE"}:
+            out[0] = "/nonexistent/d04-inject-interpreter"
     if driver_name == "kimi":
         for index, arg in enumerate(out[:-1]):
             if arg == "--agent-file":

@@ -2656,11 +2656,27 @@ class CliSolver:
             argv = self.driver.build_execute_stdin(
                 prompt, session, web_access=self.web_access,
                 kb_access=self.kb, stream=True)
-            return argv, prompt
+            return self._d04_inject_bad_interpreter(argv), prompt
         self._stage_cognitive_context_prompt(prompt, transport="argv")
-        return self.driver.build_execute(
+        return self._d04_inject_bad_interpreter(self.driver.build_execute(
             prompt, session, web_access=self.web_access,
-            kb_access=self.kb, stream=True), None
+            kb_access=self.kb, stream=True)), None
+
+    @staticmethod
+    def _d04_inject_bad_interpreter(argv: list[str]) -> list[str]:
+        """Batch 5D (audit §4.5): directed fault-injection switch.
+
+        ``MUTEKI_D04_INJECT_BAD_INTERPRETER=1`` rewrites argv[0] to a
+        nonexistent interpreter AFTER prompt assembly and BEFORE the launch
+        contract check: preflight (model auth) stays healthy while every
+        process start fails — exactly the "preflight passes, executor dies"
+        shape the D04 main-loop governor must handle. Test/fault-injection
+        only; never set in production.
+        """
+        if os.environ.get("MUTEKI_D04_INJECT_BAD_INTERPRETER", "").strip() in {
+                "1", "true", "TRUE"}:
+            return ["/nonexistent/d04-inject-interpreter", *argv[1:]]
+        return argv
 
     def _resume_invocation(
         self, prompt: str, session: str,

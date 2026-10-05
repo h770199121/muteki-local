@@ -30,6 +30,8 @@ from eval_verdict import evaluate_attempt  # noqa: E402
 from run_challenge import _eval_solved, _gate_solved  # noqa: E402
 from usage_reduce import reduce_usage  # noqa: E402
 
+FLAG = "CTF2{11111111-2222-3333-4444-555555555555}"
+
 
 def cost_event(seq, scope, identity, in_tok, out_tok):
     return {
@@ -109,6 +111,94 @@ class EvalSolvedRoutingTests(unittest.TestCase):
         v = evaluate_attempt(events, expected_flags="CTF2{x}", attempt=2)
         self.assertFalse(v.gate_accepted)
         self.assertFalse(v.solved)
+
+
+class ArtifactEvidenceTests(unittest.TestCase):
+    """批次 5A（audit §4.1）：截断输出的 artifact 回查 + 时序/来源约束。"""
+
+    def setUp(self):
+        import tempfile
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.arts = Path(self._tmp.name) / "arts"
+        self.arts.mkdir(parents=True)
+
+    def _write_artifact(self, aid: str, content: str) -> None:
+        (self.arts / f"{aid}.txt").write_text(content, encoding="utf-8")
+
+    def test_referenced_artifact_with_flag_is_evidence(self):
+        # run-23529 形态：condensed 头 600 截掉了尾部 flag，但事件引用了
+        # artifact；回读文件命中 → evidence_links 记 artifact+SHA-256。
+        self._write_artifact("c424c2e0397f", f"login page\n{FLAG}\n")
+        events = [
+            {"event_type": "tool.result", "seq": 122,
+             "payload": {"tool": "dsh",
+                         "result": {"condensed": "<html>head…</html>",
+                                    "artifact_id": "c424c2e0397f"},
+                         "artifact_id": "c424c2e0397f"}},
+            {"event_type": "run.finished", "seq": 146,
+             "payload": {"solved": True, "flag": FLAG}},
+        ]
+        v = evaluate_attempt(events, expected_flags=[],
+                             artifacts_dir=str(self.arts))
+        self.assertTrue(v.solved)
+        link = v.evidence_links[0]
+        self.assertEqual(link["event_type"], "artifact")
+        self.assertEqual(link["artifact_id"], "c424c2e0397f")
+        self.assertEqual(link["sha256"], __import__("hashlib").sha256(
+            f"login page\n{FLAG}\n".encode()).hexdigest())
+
+    def test_unreferenced_directory_hit_is_not_evidence(self):
+        # audit §4.1：目录里“另一份文件也含 flag”不能成为接受来源——
+        # 只有事件引用的 artifact 才会被读取。
+        self._write_artifact("unreferenced123", FLAG)
+        events = [
+            {"event_type": "tool.result", "seq": 5,
+             "payload": {"tool": "dsh",
+                         "result": {"condensed": "no flag in head"}}},
+            {"event_type": "run.finished", "seq": 9,
+             "payload": {"solved": True, "flag": FLAG}},
+        ]
+        v = evaluate_attempt(events, expected_flags=[],
+                             artifacts_dir=str(self.arts))
+        self.assertFalse(v.solved)
+        self.assertIn(FLAG, v.unlinked_flags)
+
+    def test_output_after_terminal_event_is_not_evidence(self):
+        # audit §4.1 时序反例：成功终态之后才出现含 flag 的输出，不得作为
+        # 该终态的来源。
+        events = [
+            {"event_type": "run.finished", "seq": 9,
+             "payload": {"solved": True, "flag": FLAG}},
+            {"event_type": "tool.result", "seq": 12,
+             "payload": {"output": FLAG}},
+        ]
+        v = evaluate_attempt(events, expected_flags=FLAG)
+        self.assertFalse(v.solved)
+
+    def test_missing_referenced_artifact_records_reason(self):
+        self._write_artifact("present000", "no flag here")
+        events = [
+            {"event_type": "tool.result", "seq": 5,
+             "payload": {"result": {"condensed": "head",
+                                    "artifact_id": "missing0000"}}},
+            {"event_type": "tool.result", "seq": 6,
+             "payload": {"result": {"condensed": "head2",
+                                    "artifact_id": "present000"}}},
+            {"event_type": "run.finished", "seq": 9,
+             "payload": {"solved": True, "flag": FLAG}},
+        ]
+        v = evaluate_attempt(events, expected_flags=[],
+                             artifacts_dir=str(self.arts))
+        self.assertFalse(v.solved)
+        missing = [l for l in v.evidence_links
+                   if l.get("event_type") == "missing_artifact"]
+        self.assertTrue(missing, "缺失的引用产物必须显式记录")
+        self.assertIn("missing0000", missing[0]["artifact_ids"])
+
+    def test_verdict_version_emitted(self):
+        v = evaluate_attempt([], expected_flags=FLAG)
+        self.assertEqual(v.to_dict()["verdict_version"], 3)
 
     def test_known_flag_match_still_solves(self):
         verdict = type("V", (), {"solved": True})()
