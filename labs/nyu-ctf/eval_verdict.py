@@ -29,13 +29,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 #: Batch-5A: bumped whenever acceptance/evidence semantics change, so archived
 #: and freshly-produced verdict rows are never compared across semantics.
-VERDICT_VERSION = 3
+#: Batch-6A: per-flag temporal binding + artifact generation uncertainty +
+#: traversal-proof artifact reads + raw-bytes hashing -> version 4.
+VERDICT_VERSION = 4
 
 # Event types that indicate the worker actually executed something.
 EXECUTION_EVENT_TYPES = frozenset({
@@ -183,20 +186,39 @@ def _read_artifact(artifacts_dir: Path | None,
                    artifact_id: str) -> tuple[str | None, str]:
     """Read one referenced artifact. Returns (content, sha256); (None, "") when
     the file is absent/unreadable — a missing referenced file is recorded, not
-    treated as evidence."""
+    treated as evidence.
+
+    Batch-6A hardening:
+      * artifact_id must be a bare safe filename — traversal (``..``), path
+        separators and absolute/UNC forms are rejected outright;
+      * the resolved file must remain inside artifacts_dir (symlink escape
+        included);
+      * sha256 is computed over the RAW file bytes — never over
+        newline-normalised text (batch-5 regression: the evaluator reported a
+        hash of read_text() output instead of the artifact bytes)."""
     if not artifacts_dir or not artifact_id:
         return None, ""
-    path = Path(artifacts_dir) / f"{artifact_id}.txt"
+    ref = artifact_id.replace("\\", "/")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,128}", ref):
+        # traversal / separators / dotfiles / absolute forms are rejected
+        return None, ""
+    base = Path(artifacts_dir).resolve()
+    path = (base / f"{ref}.txt").resolve()
+    if base != path.parent and base not in path.parents:
+        return None, ""
     try:
-        content = path.read_text(encoding="utf-8", errors="replace")
+        raw = path.read_bytes()
     except OSError:
-        path2 = Path(artifacts_dir) / artifact_id
+        alt = (base / ref).resolve()
+        if base != alt.parent and base not in alt.parents:
+            return None, ""
         try:
-            content = path2.read_text(encoding="utf-8", errors="replace")
+            raw = alt.read_bytes()
         except OSError:
             return None, ""
-    return content, hashlib.sha256(
-        content.encode("utf-8", errors="replace")).hexdigest()
+    sha = hashlib.sha256(raw).hexdigest()
+    content = raw.decode("utf-8", errors="replace")
+    return content, sha
 
 
 def evaluate_attempt(
@@ -298,7 +320,7 @@ def evaluate_attempt(
     #: batch-4-1: gate acceptance requires EVERY expected flag to carry
     #: acceptance evidence (same "all" semantics as the external judge).
     accepted_values: set[str] = set()
-    acceptance_rows: list[tuple[str, int, dict[str, Any], int | None]] = []
+    acceptance_rows: list[tuple[str, int, dict[str, Any], int | None, str]] = []
     for event in events:
         etype = str(event.get("event_type") or "")
         payload = event.get("payload") or {}
@@ -337,7 +359,8 @@ def evaluate_attempt(
         if attempt is not None and gen is not None and gen != int(attempt):
             continue
 
-        acceptance_rows.append((etype, _event_seq(event), payload, gen))
+        acceptance_rows.append((etype, _event_seq(event), payload, gen,
+                                structured))
         verdict.acceptance_sources.append(f"{etype}:{_event_seq(event)}")
         accepted_values.update(f for f in flags
                                if _mentions(structured or _output_text(payload), f))
@@ -373,9 +396,19 @@ def evaluate_attempt(
     gen_uncertain = False
     if verdict.gate_accepted:
         artifacts_dir_path = Path(artifacts_dir) if artifacts_dir else None
-        bound_seq = min((seq for _et, seq, _p, _g in acceptance_rows),
-                        default=0)
+        # Batch-6A: PER-FLAG temporal binding. Each flag's output must precede
+        # THAT flag's own earliest acceptance event — using the global earliest
+        # acceptance cut off the second flag of a multi-flag solve (its
+        # legitimate output lands after flag #1 was accepted).
+        bound_by_flag: dict[str, int] = {}
+        for _etype, seq, payload, _gen, structured in acceptance_rows:
+            text = structured or _output_text(payload)
+            for f in flags:
+                if f in text:
+                    prev = bound_by_flag.get(f)
+                    bound_by_flag[f] = seq if prev is None else min(prev, seq)
         for value in dict.fromkeys(accepted_values):
+            bound_seq = bound_by_flag.get(value, 0)
             inline_hits: list[int] = []
             missing_refs: list[str] = []
             for seq, text, gen, aid in tool_outputs:
@@ -394,6 +427,10 @@ def evaluate_attempt(
                             "flag": value, "event_type": "artifact",
                             "seqs": [seq], "artifact_id": aid,
                             "sha256": sha})
+                        # Batch-6A: generation uncertainty propagates through
+                        # the artifact branch too (previously inline-only).
+                        if attempt is not None and gen is None:
+                            gen_uncertain = True
                         break
             if inline_hits:
                 verdict.evidence_links.append({

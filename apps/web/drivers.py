@@ -1404,9 +1404,14 @@ def build_standby_driver(cmd: dict[str, Any], mgr: "RunManager | None" = None) -
                 )
                 _events: list[dict] = []
                 async for ev in run.store.replay(run.run_id):
-                    _events.append(
-                        ev.model_dump() if hasattr(ev, "model_dump")
-                        else dict(ev))
+                    # Batch-6B: JSON round-trip normalisation. model_dump()
+                    # keeps EventType enum members whose str() is
+                    # "EventType.X" on py3.12+ — writeup_evidence compares
+                    # plain strings, so the enum form produced empty
+                    # manifests (audit §4.2).
+                    raw = (ev.model_dump_json() if hasattr(ev, "model_dump_json")
+                           else _json.dumps(dict(ev), default=str))
+                    _events.append(_json.loads(raw))
                 manifest = build_evidence_manifest(_events, workspace=root)
                 manifest["notes"].append(
                     "screenshots: collected by the HOST collector "
