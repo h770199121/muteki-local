@@ -27,7 +27,12 @@ from muteki.core.cost import CostController
 from muteki.core.event_bus import EventBus
 from muteki.core.events import Event, EventType
 
-DEFAULT_BASE_URL = os.environ.get("MUTEKI_DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+# D01 contract (2026-10-05): the model endpoint is ALWAYS an explicit
+# local/LAN config — no implicit fallback to a public API. When the env is
+# unset we keep an empty default and LLMClient fails with a clear config
+# error at construction time instead of silently calling api.deepseek.com.
+DEFAULT_BASE_URL = os.environ.get("MUTEKI_DEEPSEEK_BASE_URL", "")
+DEFAULT_BASE_URL_DOC = "https://api.deepseek.com/v1"  # documented example only
 LLM_TEMPERATURE_MODES = ("default", "custom", "omit")
 DEFAULT_CUSTOM_TEMPERATURE = 1.0
 
@@ -166,7 +171,11 @@ class LLMClient:
         temperature_value: Optional[float] = None,
     ) -> None:
         self.api_key = api_key or os.environ.get("MUTEKI_DEEPSEEK_API_KEY", "")
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
+        if not self.base_url:
+            raise ValueError(
+                "模型端点未配置：请设置 MUTEKI_DEEPSEEK_BASE_URL（本地/局域网 API），"
+                "不会隐式回退到公网默认地址（D01 契约）")
         self.bus = bus
         self.cost = cost
         self.temperature_mode, self.temperature_value = normalize_llm_temperature(

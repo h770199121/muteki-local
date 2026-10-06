@@ -64,6 +64,17 @@ def _extract_url(command: str) -> str:
     return url.rstrip("\\;,\"'").rstrip("\\")
 
 
+def _etype(event: dict[str, Any]) -> str:
+    """Normalise event_type to its plain string value.
+
+    Callers may hand us pydantic Event objects whose model_dump keeps the
+    EventType enum member; str() of that member is 'EventType.X' on newer
+    Pythons and never matches the plain 'tool.start' style comparisons."""
+    raw = event.get("event_type") or ""
+    value = getattr(raw, "value", None)
+    return str(value) if value is not None else str(raw)
+
+
 def _tool_interactions(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Pair tool.start commands with tool.result outputs.
 
@@ -85,7 +96,7 @@ def _tool_interactions(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return ""
 
     for event in events:
-        etype = str(event.get("event_type") or "")
+        etype = _etype(event)
         payload = event.get("payload") or {}
         solver = str(event.get("solver_id") or "") or "_anon"
         if etype == "tool.start":
@@ -127,7 +138,7 @@ def build_evidence_manifest(
     flag_value = flag or ""
     if not flag_value:
         for event in events:
-            if str(event.get("event_type") or "") == "run.finished":
+            if _etype(event) == "run.finished":
                 payload = event.get("payload") or {}
                 if payload.get("solved") is True:
                     flag_value = str(payload.get("flag") or "")

@@ -129,7 +129,10 @@ class ArtifactEvidenceTests(unittest.TestCase):
     def test_referenced_artifact_with_flag_is_evidence(self):
         # run-23529 形态：condensed 头 600 截掉了尾部 flag，但事件引用了
         # artifact；回读文件命中 → evidence_links 记 artifact+SHA-256。
-        self._write_artifact("c424c2e0397f", f"login page\n{FLAG}\n")
+        # 批次 6A：断言按写入文件的原始字节摘要（write_text 在 Windows 写
+        # CRLF；旧断言对 LF 字符串算 hash 与新实现的原始字节口径不符）。
+        artifact_body = f"login page\n{FLAG}\n"
+        self._write_artifact("c424c2e0397f", artifact_body)
         events = [
             {"event_type": "tool.result", "seq": 122,
              "payload": {"tool": "dsh",
@@ -146,7 +149,7 @@ class ArtifactEvidenceTests(unittest.TestCase):
         self.assertEqual(link["event_type"], "artifact")
         self.assertEqual(link["artifact_id"], "c424c2e0397f")
         self.assertEqual(link["sha256"], __import__("hashlib").sha256(
-            f"login page\n{FLAG}\n".encode()).hexdigest())
+            (self.arts / "c424c2e0397f.txt").read_bytes()).hexdigest())
 
     def test_unreferenced_directory_hit_is_not_evidence(self):
         # audit §4.1：目录里“另一份文件也含 flag”不能成为接受来源——
@@ -198,7 +201,7 @@ class ArtifactEvidenceTests(unittest.TestCase):
 
     def test_verdict_version_emitted(self):
         v = evaluate_attempt([], expected_flags=FLAG)
-        self.assertEqual(v.to_dict()["verdict_version"], 3)
+        self.assertEqual(v.to_dict()["verdict_version"], 4)
 
     def test_known_flag_match_still_solves(self):
         verdict = type("V", (), {"solved": True})()
