@@ -121,10 +121,10 @@ async def _require_dict_body(request: "Request", *, allow_empty: bool = False) -
 def create_app(manager: Optional[RunManager] = None) -> FastAPI:
     mgr = manager or RunManager()
 
-    # Retention policy (BE-auto-archive): auto-archive idle runs, then delete the
-    # ones that stay idle. Defaults: archive after 3 days, delete after 7 days,
-    # sweep hourly. All env-tunable; set MUTEKI_RETENTION_ENABLED=0 to disable
-    # (pinned runs are NEVER auto-touched).
+    # Retention policy: per confirmed product contract (2026-10-05, D07) runs/
+    # artifacts/screenshots are KEPT by default with manual archive/cleanup —
+    # the automatic archive+delete sweep is OFF unless MUTEKI_RETENTION_ENABLED=1
+    # is set explicitly (pinned runs are NEVER auto-touched even when enabled).
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # Start the reverse-connect control receiver: the in-container supervisors
@@ -137,7 +137,7 @@ def create_app(manager: Optional[RunManager] = None) -> FastAPI:
         except OSError as exc:  # port already bound (another backend?) — log, continue
             print(f"[control-receiver] could not bind control port: {exc}", flush=True)
         task: Optional[asyncio.Task] = None
-        enabled = os.environ.get("MUTEKI_RETENTION_ENABLED", "1").lower() not in (
+        enabled = os.environ.get("MUTEKI_RETENTION_ENABLED", "0").lower() not in (
             "0", "false", "no", "off", "")
         if enabled:
             task = asyncio.create_task(mgr.retention_loop(

@@ -23,7 +23,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from eval_verdict import evaluate_attempt  # noqa: E402
+from eval_verdict import VERDICT_VERSION, evaluate_attempt  # noqa: E402
 from eval_env import freeze_eval_env  # noqa: E402
 from usage_reduce import (  # noqa: E402
     USAGE_STATS_VERSION,
@@ -343,6 +343,8 @@ def run_static(ch: dict, args, password: str) -> int:
         "tag": args.tag, "engine": args.engine, "challenge": args.challenge,
         "run_id": run_id, "finished": finished,
         "solved": _eval_solved(verdict, gate_solved, official),
+        "solved_strict": bool(verdict.solved and verdict.attempt_matched),
+        "verdict_version": VERDICT_VERSION,
         "gate_solved": gate_solved,
         "elapsed_s": round(elapsed, 1), "wall_budget_s": args.budget,
         "tool_calls": tool_calls,
@@ -460,6 +462,8 @@ def main() -> int:
             "tag": args.tag, "engine": args.engine, "challenge": args.challenge,
             "run_id": run_id, "finished": finished,
             "solved": _eval_solved(verdict, gate_solved, official),
+        "solved_strict": bool(verdict.solved and verdict.attempt_matched),
+        "verdict_version": VERDICT_VERSION,
             "gate_solved": gate_solved,
             "elapsed_s": round(elapsed, 1), "wall_budget_s": args.budget,
             "tool_calls": tool_calls,
