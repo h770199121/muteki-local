@@ -36,12 +36,10 @@ LINES = {
           "key": "local-no-key"},
     "X1": {"base": "http://host.docker.internal:18202/v1", "model": "qwen38-iq3xxs",
            "key": "local-no-key"},
-    "X2": {"base": "http://host.docker.internal:18202/v1", "model": "swift15-iq3xxs",
+    "T4": {"base": "http://host.docker.internal:18221/v1", "model": "qwen3.8-27b",
            "key": "local-no-key"},
     "X3": {"base": "http://host.docker.internal:18202/v1", "model": "signal38-iq3xxs",
            "key": "local-no-key"},
-    "X2D": {"base": "http://host.docker.internal:18212/v1", "model": "swift15-iq3xxs",
-            "key": "local-no-key"},
     "BM": {"base": "http://host.docker.internal:18202/v1", "model": "base-mtp-iq3xxs",
            "key": "local-no-key"},
     "BM2": {"base": "http://host.docker.internal:18215/v1", "model": "base-mtp-iq3xxs",
@@ -56,6 +54,10 @@ LINES = {
     # silently left the swarm on the previous model line.
     "X4": {"base": "http://host.docker.internal:18214/v1", "model": "occamy-1.0",
            "key": "local-no-key"},
+    # Coder390 Q4 LynnStyle dual line (2026-10-09): standard llama.cpp b10908,
+    # layer-split 3:2, KV q8_0/q4_0, built-in MTP, no API key, port 18216.
+    "C390": {"base": "http://host.docker.internal:18216/v1", "model": "coder390-q4lynn",
+             "key": "local-no-key"},
 }
 
 

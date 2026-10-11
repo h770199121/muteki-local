@@ -102,25 +102,32 @@ def _event_from_notification(notification: Any, root_session: str) -> None:
         blocks = message.get("content")
         if not isinstance(blocks, list):
             blocks = []
-        tool_block = next((
+        # A parallel tool-call turn arrives as ONE message whose content[] holds N
+        # tool-result blocks. Emit ONE event per block so every call's output (and
+        # any flag living in a non-first block) reaches the provenance gate — the
+        # old next() surfaced only the first block, silently dropping the rest
+        # (evidence: run-26315/26422/26874/26932 runtime-solved runs whose
+        # flag-bearing result never produced a tool_result event).
+        result_blocks = [
             item for item in blocks
             if isinstance(item, dict) and item.get("type") == "tool-result"
-        ), {})
-        call_id = f"{session_id}:{source.get('callId') or tool_block.get('toolCallId') or ''}"
-        text = _content_text(message.get("content"))
-        is_error = bool(
-            message.get("isError") or tool_block.get("isError") or data.get("error"))
-        if is_error and text:
-            text = f"[error] {text}"
-        _emit({
-            "type": "tool_result",
-            "session_id": session_id,
-            "root_session_id": root_session,
-            "call_id": call_id,
-            "tool": str(message.get("toolName") or tool_block.get("toolName") or ""),
-            "output": text,
-            "is_error": is_error,
-        })
+        ] or [{}]
+        for tool_block in result_blocks:
+            call_id = f"{session_id}:{source.get('callId') or tool_block.get('toolCallId') or ''}"
+            text = _content_text(tool_block.get("content"))
+            is_error = bool(
+                message.get("isError") or tool_block.get("isError") or data.get("error"))
+            if is_error and text:
+                text = f"[error] {text}"
+            _emit({
+                "type": "tool_result",
+                "session_id": session_id,
+                "root_session_id": root_session,
+                "call_id": call_id,
+                "tool": str(message.get("toolName") or tool_block.get("toolName") or ""),
+                "output": text,
+                "is_error": is_error,
+            })
         return
 
     if event_type == "assistant/message" and session_id == root_session:

@@ -259,8 +259,21 @@ def _write_kb_pointer(root: Path) -> None:
     dest = root / "AGENTS.md"
     if dest.exists():
         return
+    # Canonical source: docker/worker/AGENTS.md in the repo tree (same doc the
+    # worker image bakes to /opt/muteki/AGENTS.md). Reading it keeps ONE source
+    # of truth — the inline constant and the baked copy had drifted apart, and
+    # whichever seed ran first decided the worker's prompt for the whole run.
+    content = _KB_POINTER
     try:
-        dest.write_text(_KB_POINTER, encoding="utf-8")
+        canonical = Path(__file__).resolve().parents[2] / "docker" / "worker" / "AGENTS.md"
+        if canonical.is_file():
+            text = canonical.read_text(encoding="utf-8").strip()
+            if text:
+                content = text + "\n"
+    except OSError:
+        pass
+    try:
+        dest.write_text(content, encoding="utf-8", newline="\n")
     except OSError:
         pass
 

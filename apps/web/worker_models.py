@@ -740,24 +740,29 @@ def _worker_container_model_probe(
             'rm -rf "$CODEX_HOME"; mkdir -p "$CODEX_HOME"; '
             'cp -R "$MUTEKI_CODEX_HOME_SEED"/. "$CODEX_HOME"/; '
             'chmod -R u+rwX "$CODEX_HOME"; fi',
+            # tr -d "\r\n": API_KEY files are written host-side and on Windows a
+            # text-mode \n becomes \r\n — $(cat) strips only the trailing \n and
+            # the leftover \r explodes opencode's {env:VAR} JSONC expansion
+            # (2026-10-07 "Config file at OPENCODE_CONFIG_CONTENT is not valid
+            # JSON(C)" probe failure).
             'if [ -r "$CLAUDE_CODE_OAUTH_TOKEN_FILE" ]; then '
-            'export CLAUDE_CODE_OAUTH_TOKEN="$(cat "$CLAUDE_CODE_OAUTH_TOKEN_FILE")"; fi',
+            'export CLAUDE_CODE_OAUTH_TOKEN="$(tr -d "\\r\\n" < "$CLAUDE_CODE_OAUTH_TOKEN_FILE")"; fi',
             'if [ -r "$ANTHROPIC_AUTH_TOKEN_FILE" ]; then '
-            'export ANTHROPIC_AUTH_TOKEN="$(cat "$ANTHROPIC_AUTH_TOKEN_FILE")"; fi',
+            'export ANTHROPIC_AUTH_TOKEN="$(tr -d "\\r\\n" < "$ANTHROPIC_AUTH_TOKEN_FILE")"; fi',
             'if [ -r "$CURSOR_API_KEY_FILE" ]; then '
-            'export CURSOR_API_KEY="$(cat "$CURSOR_API_KEY_FILE")"; fi',
+            'export CURSOR_API_KEY="$(tr -d "\\r\\n" < "$CURSOR_API_KEY_FILE")"; fi',
             'if [ -r "$ANTHROPIC_API_KEY_FILE" ]; then '
-            'export ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"; fi',
+            'export ANTHROPIC_API_KEY="$(tr -d "\\r\\n" < "$ANTHROPIC_API_KEY_FILE")"; fi',
             'if [ -r "$OPENAI_API_KEY_FILE" ]; then '
-            'export OPENAI_API_KEY="$(cat "$OPENAI_API_KEY_FILE")"; fi',
+            'export OPENAI_API_KEY="$(tr -d "\\r\\n" < "$OPENAI_API_KEY_FILE")"; fi',
             'if [ -r "$OPENCODE_API_KEY_FILE" ]; then '
-            'export OPENCODE_API_KEY="$(cat "$OPENCODE_API_KEY_FILE")"; fi',
+            'export OPENCODE_API_KEY="$(tr -d "\\r\\n" < "$OPENCODE_API_KEY_FILE")"; fi',
             'if [ -r "$DEEPSEEK_API_KEY_FILE" ]; then '
-            'export DEEPSEEK_API_KEY="$(cat "$DEEPSEEK_API_KEY_FILE")"; fi',
+            'export DEEPSEEK_API_KEY="$(tr -d "\\r\\n" < "$DEEPSEEK_API_KEY_FILE")"; fi',
             'if [ -r "$KIMI_MODEL_API_KEY_FILE" ]; then '
-            'export KIMI_MODEL_API_KEY="$(cat "$KIMI_MODEL_API_KEY_FILE")"; fi',
+            'export KIMI_MODEL_API_KEY="$(tr -d "\\r\\n" < "$KIMI_MODEL_API_KEY_FILE")"; fi',
             'if [ -r "$XAI_API_KEY_FILE" ]; then '
-            'export XAI_API_KEY="$(cat "$XAI_API_KEY_FILE")"; fi',
+            'export XAI_API_KEY="$(tr -d "\\r\\n" < "$XAI_API_KEY_FILE")"; fi',
         ]
         timeout_s = max(1, int(getattr(driver_for(profile), "_HELLO_TIMEOUT", 90)))
         script = (
@@ -1290,23 +1295,23 @@ def _worker_container_model_batch_probe(
                 'cp -R "$MUTEKI_GROK_HOME_SEED"/. "$GROK_HOME"/; '
                 'chmod -R u+rwX "$GROK_HOME"; fi',
                 'if [ -r "$CLAUDE_CODE_OAUTH_TOKEN_FILE" ]; then '
-                'export CLAUDE_CODE_OAUTH_TOKEN="$(cat "$CLAUDE_CODE_OAUTH_TOKEN_FILE")"; fi',
+                'export CLAUDE_CODE_OAUTH_TOKEN="$(tr -d "\\r\\n" < "$CLAUDE_CODE_OAUTH_TOKEN_FILE")"; fi',
                 'if [ -r "$ANTHROPIC_AUTH_TOKEN_FILE" ]; then '
-                'export ANTHROPIC_AUTH_TOKEN="$(cat "$ANTHROPIC_AUTH_TOKEN_FILE")"; fi',
+                'export ANTHROPIC_AUTH_TOKEN="$(tr -d "\\r\\n" < "$ANTHROPIC_AUTH_TOKEN_FILE")"; fi',
                 'if [ -r "$CURSOR_API_KEY_FILE" ]; then '
-                'export CURSOR_API_KEY="$(cat "$CURSOR_API_KEY_FILE")"; fi',
+                'export CURSOR_API_KEY="$(tr -d "\\r\\n" < "$CURSOR_API_KEY_FILE")"; fi',
                 'if [ -r "$ANTHROPIC_API_KEY_FILE" ]; then '
-                'export ANTHROPIC_API_KEY="$(cat "$ANTHROPIC_API_KEY_FILE")"; fi',
+                'export ANTHROPIC_API_KEY="$(tr -d "\\r\\n" < "$ANTHROPIC_API_KEY_FILE")"; fi',
                 'if [ -r "$OPENAI_API_KEY_FILE" ]; then '
-                'export OPENAI_API_KEY="$(cat "$OPENAI_API_KEY_FILE")"; fi',
+                'export OPENAI_API_KEY="$(tr -d "\\r\\n" < "$OPENAI_API_KEY_FILE")"; fi',
                 'if [ -r "$OPENCODE_API_KEY_FILE" ]; then '
-                'export OPENCODE_API_KEY="$(cat "$OPENCODE_API_KEY_FILE")"; fi',
+                'export OPENCODE_API_KEY="$(tr -d "\\r\\n" < "$OPENCODE_API_KEY_FILE")"; fi',
                 'if [ -r "$DEEPSEEK_API_KEY_FILE" ]; then '
-                'export DEEPSEEK_API_KEY="$(cat "$DEEPSEEK_API_KEY_FILE")"; fi',
+                'export DEEPSEEK_API_KEY="$(tr -d "\\r\\n" < "$DEEPSEEK_API_KEY_FILE")"; fi',
                 'if [ -r "$KIMI_MODEL_API_KEY_FILE" ]; then '
-                'export KIMI_MODEL_API_KEY="$(cat "$KIMI_MODEL_API_KEY_FILE")"; fi',
+                'export KIMI_MODEL_API_KEY="$(tr -d "\\r\\n" < "$KIMI_MODEL_API_KEY_FILE")"; fi',
                 'if [ -r "$XAI_API_KEY_FILE" ]; then '
-                'export XAI_API_KEY="$(cat "$XAI_API_KEY_FILE")"; fi',
+                'export XAI_API_KEY="$(tr -d "\\r\\n" < "$XAI_API_KEY_FILE")"; fi',
             ]
             timeout_s = max(1, int(getattr(drv, "_HELLO_TIMEOUT", 90)))
             prepared.append({
