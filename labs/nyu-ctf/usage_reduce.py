@@ -17,6 +17,8 @@ This module is the single reduction entry point.  Rules:
 * never add a challenge-scope rollup to the solver ledgers it covers;
 * report which solvers are covered by a challenge rollup, and whether the
   reconstruction is complete;
+* coverage ordering is (execution_generation, seq): a rollup left behind by a
+  superseded generation is recorded as a note, not an incomplete-telemetry flag;
 * when the history cannot be rebuilt unambiguously, say so instead of emitting a
   precise-looking total.
 
@@ -34,7 +36,9 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 # Bump when the reduction semantics change, so stored results stay interpretable.
-USAGE_STATS_VERSION = 2
+# v3: coverage comparison became generation-aware; a rollup from a superseded
+#     execution generation is now a note, not an incomplete-telemetry flag.
+USAGE_STATS_VERSION = 3
 
 COST_EVENT_TYPES = frozenset({"cost.update", "cost_update"})
 
@@ -115,6 +119,9 @@ class UsageReduction:
     basis: str = "none"           # solver_ledgers | challenge_rollup | none
     telemetry_complete: bool = True
     incomplete_reasons: list[str] = field(default_factory=list)
+    #: informational (non-fatal) observations about rollup coverage, e.g. a
+    #: rollup left behind by a superseded execution generation
+    rollup_notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -125,6 +132,7 @@ class UsageReduction:
             "basis": self.basis,
             "telemetry_complete": self.telemetry_complete,
             "incomplete_reasons": sorted(set(self.incomplete_reasons)),
+            "rollup_notes": sorted(set(self.rollup_notes)),
             "solver_totals": self.solver_totals,
             "challenge_rollups": self.challenge_rollups,
             "run_rollup": self.run_rollup,
@@ -221,9 +229,15 @@ def reduce_usage(events: Iterable[dict[str, Any]]) -> UsageReduction:
         rollup_total_in = sum(int(v["input_tokens"]) for v in result.challenge_rollups.values())
         rollup_total_out = sum(int(v["output_tokens"]) for v in result.challenge_rollups.values())
         if result.challenge_rollups:
-            max_solver_seq = max(int(v["seq"]) for v in result.solver_totals.values())
-            max_rollup_seq = max(int(v["seq"]) for v in result.challenge_rollups.values())
-            rollup_newer = max_rollup_seq >= max_solver_seq
+            # Coverage ordering uses the same (generation, seq) key as _newer():
+            # raw seq restarts after every resume, so comparing it across
+            # execution generations misclassified superseded rollups as STALE
+            # (leftover noise: every reflection saw "rollup is STALE").
+            max_solver_key = max((int(v["execution_generation"]), int(v["seq"]))
+                                 for v in result.solver_totals.values())
+            max_rollup_key = max((int(v["execution_generation"]), int(v["seq"]))
+                                 for v in result.challenge_rollups.values())
+            rollup_newer = max_rollup_key >= max_solver_key
             if rollup_total_in == result.input_tokens and rollup_total_out == result.output_tokens:
                 result.solvers_covered_by_rollup = sorted(result.solver_totals)
             elif rollup_newer and (rollup_total_in > result.input_tokens
@@ -243,14 +257,25 @@ def reduce_usage(events: Iterable[dict[str, Any]]) -> UsageReduction:
                     f"in={rollup_total_in}/out={rollup_total_out} vs solver "
                     f"in={result.input_tokens}/out={result.output_tokens}); "
                     "coverage is inconsistent, no single authoritative total")
+            elif max_rollup_key[0] < max_solver_key[0]:
+                # Every rollup is from an execution generation OLDER than the
+                # newest solver snapshot: the rollup cannot cover the current
+                # generation by construction, and per the resume rule the
+                # newest generation's ledgers are authoritative.  That is a
+                # supersession, not a gap — note it, keep telemetry complete.
+                result.solvers_covered_by_rollup = sorted(result.solver_totals)
+                result.rollup_notes.append(
+                    "challenge rollup is from a superseded execution generation "
+                    f"(rollup gen/seq={max_rollup_key} < solver gen/seq={max_solver_key}); "
+                    "solver ledgers remain the authoritative basis")
             else:
                 result.telemetry_complete = False
                 result.incomplete_reasons.append(
-                    "challenge rollup is STALE (seq %d < solver seq %d; rollup "
+                    "challenge rollup is STALE (gen/seq %s < solver gen/seq %s; rollup "
                     f"in={rollup_total_in}/out={rollup_total_out} vs solver "
                     f"in={result.input_tokens}/out={result.output_tokens}); solver "
                     "usage recorded after the last rollup is not covered by it"
-                    % (max_rollup_seq, max_solver_seq))
+                    % (max_rollup_key, max_solver_key))
     elif challenge_snaps:
         result.basis = "challenge_rollup"
         result.input_tokens = sum(int(v["input_tokens"]) for v in result.challenge_rollups.values())

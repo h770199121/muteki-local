@@ -146,6 +146,13 @@ def create_app(manager: Optional[RunManager] = None) -> FastAPI:
                 delete_after_s=_env_float("MUTEKI_DELETE_DAYS", 7.0) * 86400.0,
             ))
         try:
+            scheduled = mgr.schedule_auto_resume()
+            if scheduled:
+                print(f"[auto-resume] scheduled {scheduled} interrupted run(s) "
+                      "for relaunch (MUTEKI_AUTO_RESUME)", flush=True)
+        except Exception as exc:
+            print(f"[auto-resume] scheduling failed: {exc}", flush=True)
+        try:
             yield
         finally:
             if task is not None:

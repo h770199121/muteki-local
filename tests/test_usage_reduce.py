@@ -189,6 +189,45 @@ class CoverageHonestyTests(unittest.TestCase):
         self.assertFalse(r.telemetry_complete)
         self.assertTrue(any("SMALLER" in x for x in r.incomplete_reasons))
 
+    def test_superseded_generation_rollup_is_a_note_not_incomplete(self):
+        # After a resume the solver's (generation, seq) restarts; the rollup
+        # from the old generation cannot cover it by construction.  Per the
+        # resume rule the newest generation's ledgers are authoritative —
+        # a supersession note, NOT a telemetry_complete=False alarm.
+        events = [
+            cost_event(500, "challenge", "run-x", 900, 90, gen=1),
+            cost_event(10, "solver", "b", 5000, 500, gen=2),
+        ]
+        r = reduce_usage(events)
+        self.assertEqual(r.basis, "solver_ledgers")
+        self.assertEqual(r.input_tokens, 5000)
+        self.assertTrue(r.telemetry_complete)
+        self.assertFalse(r.incomplete_reasons)
+        self.assertTrue(any("superseded" in x for x in r.rollup_notes))
+
+    def test_newer_generation_rollup_superset_is_authoritative(self):
+        # Cross-generation comparison must use (generation, seq): a rollup from
+        # generation 2 with a low seq beats generation-1 solver snapshots with
+        # high seq.  Raw-seq comparison used to misread this as STALE.
+        events = [
+            cost_event(500, "solver", "a", 1000, 100, gen=1),
+            cost_event(10, "challenge", "run-x", 1500, 150, gen=2),
+        ]
+        r = reduce_usage(events)
+        self.assertEqual(r.basis, "challenge_rollup")
+        self.assertEqual(r.input_tokens, 1500)
+        self.assertTrue(r.telemetry_complete)
+
+    def test_same_generation_stale_rollup_still_flagged(self):
+        # Same-generation staleness is a genuine gap and must stay flagged.
+        events = [
+            cost_event(1, "challenge", "run-x", 900, 90, gen=1),
+            cost_event(3, "solver", "b", 5000, 500, gen=1),
+        ]
+        r = reduce_usage(events)
+        self.assertFalse(r.telemetry_complete)
+        self.assertTrue(any("STALE" in x for x in r.incomplete_reasons))
+
     def test_no_events_is_explicitly_incomplete(self):
         r = reduce_usage([])
         self.assertEqual(r.basis, "none")
@@ -209,7 +248,7 @@ class CoverageHonestyTests(unittest.TestCase):
     def test_stats_version_is_emitted(self):
         r = reduce_usage([cost_event(1, "solver", "a", 1, 1)])
         self.assertEqual(r.to_dict()["usage_stats_version"], USAGE_STATS_VERSION)
-        self.assertEqual(USAGE_STATS_VERSION, 2)
+        self.assertEqual(USAGE_STATS_VERSION, 3)
 
 
 class ArchivedRunTests(unittest.TestCase):

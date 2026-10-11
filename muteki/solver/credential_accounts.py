@@ -1042,7 +1042,11 @@ def _add_secret_file_or_env(
                     out[env_name] = value
             return
     if source.get(env_name):
-        out[env_name] = str(source[env_name])
+        value = str(source[env_name]).strip()
+        # trailing newlines from .env parsing break engines that pre-parse
+        # {env:VAR} into JSONC (opencode "UnexpectedEndOfString")
+        if value:
+            out[env_name] = value
 
 
 def _add_base_url(out: dict[str, str], *, base: Optional[Path], env_name: str) -> None:

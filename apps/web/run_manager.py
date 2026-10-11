@@ -37,6 +37,11 @@ from apps.web.control_adapter import (
     safe_hitl_echo,
 )
 from apps.web.run_meta import FolderStore, RunMetaStore
+from apps.web.run_recovery import (
+    auto_resume_enabled,
+    auto_resume_stagger_s,
+    newest_generation_interrupted,
+)
 from apps.web.worker_config import WorkerConfigStore
 from muteki.control import (
     ApplyResult,
@@ -406,6 +411,11 @@ class RunManager:
         except Exception as exc:
             self.protocol2_error = type(exc).__name__
         self.runs: dict[str, Run] = {}
+        # Batch 8 (leftover: restart auto-recovery): run ids whose newest
+        # generation was closed as interrupted (control-plane restart).
+        # schedule_auto_resume() consumes this after the event loop is live.
+        self._pending_auto_resume: list[str] = []
+        self._auto_resume_task: Optional[asyncio.Task] = None
         # Main-task, standby, resolve, delete, and shutdown admission share one
         # lifecycle boundary. Long cleanup waits publish an explicit per-run fence
         # rather than holding this lock, so conflicting operations fail closed
@@ -942,6 +952,19 @@ class RunManager:
                     # unreadable log must not break rail hydration for OTHER
                     # runs. The in-memory force-settle above still applies.
                     pass
+            # Batch 8: opt-in auto-resume candidates — a protocol-1 started run
+            # whose NEWEST generation's terminal event is the durable interrupted
+            # reconciliation. Evaluated after the 5C append above so a closure
+            # synthesized on THIS boot is visible too; a run closed in an earlier
+            # boot (already finished in the summary) is picked up by the same scan.
+            if protocol1_owned and run.started:
+                try:
+                    interrupted = newest_generation_interrupted(
+                        store.load_all(rid), protocol1_gen)
+                except Exception:
+                    interrupted = False
+                if interrupted:
+                    self._pending_auto_resume.append(rid)
             # a rehydrated run is never live → it can't be paused or mid-run.
             run.paused = False
             # order persisted runs by recency of activity (newest gets the highest
@@ -3122,6 +3145,41 @@ class RunManager:
             async with self._lifecycle_lock:
                 self._launching_runs.discard(run_id)
 
+    def schedule_auto_resume(self) -> int:
+        """Opt-in (MUTEKI_AUTO_RESUME): re-open interrupted runs on boot.
+
+        Called from the server lifespan once the event loop is live. Returns
+        the number of candidates scheduled; every launch goes through the same
+        resolve() admission fence as the operator's 继续 button, staggered to
+        avoid a boot-time thundering herd of swarms."""
+        if not auto_resume_enabled():
+            return 0
+        candidates = [
+            run_id for run_id in dict.fromkeys(self._pending_auto_resume)
+            if (run := self.runs.get(run_id)) is not None and run.started
+        ]
+        self._pending_auto_resume.clear()
+        if not candidates:
+            return 0
+        self._auto_resume_task = asyncio.create_task(
+            self._auto_resume_loop(candidates))
+        return len(candidates)
+
+    async def _auto_resume_loop(self, candidates: "list[str]") -> None:
+        stagger = auto_resume_stagger_s()
+        for run_id in candidates:
+            if self._shutting_down:
+                return
+            try:
+                launched = await self.resolve(run_id)
+            except Exception:
+                LOG.exception("auto-resume failed for %s", run_id)
+                launched = False
+            LOG.info("auto-resume %s: %s", run_id,
+                     "relaunched" if launched else "skipped")
+            if stagger:
+                await asyncio.sleep(stagger)
+
     async def _resolve_launching(
         self, run_id: str, run: Run, body: dict[str, Any] | None = None,
     ) -> bool:
@@ -3456,6 +3514,10 @@ class RunManager:
         async with self._lifecycle_lock:
             self._shutting_down = True
         pending: dict[asyncio.Task, str] = {}
+        if (self._auto_resume_task is not None
+                and not self._auto_resume_task.done()):
+            pending[self._auto_resume_task] = "auto-resume"
+            self._auto_resume_task = None
         live_standbys = [
             run for run in list(self.runs.values())
             if self._standby_busy(run)
