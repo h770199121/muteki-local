@@ -12,13 +12,17 @@ from __future__ import annotations
 import hashlib
 import time
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from pydantic import BaseModel, Field
 
 
 class EventType(str, Enum):
     RUN_PREPARING = "run.preparing"
+    #   Convention (see run_level_started below): worker paths REUSE RUN_STARTED
+    #   with solver_id + scope:"worker"; the first worker's start is the de-facto
+    #   run start and a solver-free emission is often absent entirely. Analyses
+    #   must use run_level_started(), never the LAST run.started.
     RUN_STARTED = "run.started"
     RUN_TITLED = "run.titled"  # auto-generated conversation title landed (rail label)
     RUN_FINISHED = "run.finished"
@@ -92,6 +96,34 @@ class Event(BaseModel):
 # Typed payload constructors.
 # Producers call these; they return a `payload` dict with a stable shape.
 # ---------------------------------------------------------------------------
+
+
+def run_level_started(events: Iterable[Any]) -> Optional[dict[str, Any]]:
+    """The RUN-level ``run.started`` event, not the worker-level duplicate.
+
+    Accepts decoded JSONL row dicts and/or Event models. Semantics (identical
+    to the original labs/nyu-ctf/replay_eval.py helper this was promoted from):
+    take the first run.started with no solver_id and non-worker scope, falling
+    back to the earliest of any kind for old streams — mid-run redispatch
+    (explore/review/standby) appends worker-level starts, so "last run.started"
+    miscomputes framework time (2026-10-04 timing-audit quirk).
+    """
+    started: list[dict[str, Any]] = []
+    for e in events:
+        if isinstance(e, dict):
+            et = e.get("event_type")
+            et = str(getattr(et, "value", et) or "")
+            if et == EventType.RUN_STARTED.value:
+                started.append(e)
+        else:
+            if getattr(e, "event_type", None) == EventType.RUN_STARTED:
+                started.append(e.model_dump())
+    if not started:
+        return None
+    run_level = [e for e in started
+                 if not str(e.get("solver_id") or "").strip()
+                 and (e.get("payload") or {}).get("scope") != "worker"]
+    return (run_level or started)[0]
 
 
 def context_state_payload(

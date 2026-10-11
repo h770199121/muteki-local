@@ -61,11 +61,94 @@ def _gate_flag(events: list[dict]) -> str | None:
     return None
 
 
+def _node_bin() -> str:
+    import shutil
+    return shutil.which("node") or ""
+
+
+def _playwright_pkg_dir() -> str:
+    """Locate the Node playwright package dir without touching a shell.
+
+    Resolution order: MUTEKI_PLAYWRIGHT_PKG override → node's global
+    node_modules (Windows npm -g convention: <node_dir>/node_modules) →
+    npx cache. The old per-page path invoked `npx playwright`, whose .cmd
+    shim routes argv through cmd.exe and mangles URLs containing & % ^ —
+    the root cause of the "查询串失败" screenshots.
+    """
+    import os
+    import shutil
+    env = os.environ.get("MUTEKI_PLAYWRIGHT_PKG")
+    if env and (Path(env) / "package.json").is_file():
+        return env
+    node = shutil.which("node")
+    if node:
+        candidate = Path(node).parent / "node_modules" / "playwright"
+        if (candidate / "package.json").is_file():
+            return str(candidate)
+    local_app = os.environ.get("LOCALAPPDATA")
+    if local_app:
+        cache = Path(local_app) / "npm-cache" / "_npx"
+        if cache.is_dir():
+            for entry in sorted(cache.glob("*/node_modules/playwright")):
+                if (entry / "package.json").is_file():
+                    return str(entry)
+    return ""
+
+
+def _node_batch_screenshot(jobs: list[dict], total_timeout_s: int) -> dict:
+    """Screenshot N pages in ONE persistent chromium process.
+
+    Returns {name: detail} with detail == "ok" on success. URLs travel inside
+    a JSON file (never the command line), so shell metacharacters in query
+    strings cannot be mangled; a single browser launch removes the
+    back-to-back cold-start race that made consecutive npx shots flaky.
+    """
+    import json as _json
+    import subprocess
+    import tempfile
+    node = _node_bin()
+    pkg = _playwright_pkg_dir()
+    if not node or not pkg or not jobs:
+        return {}
+    script = HERE / "batch_screenshot.cjs"
+    if not script.is_file():
+        return {}
+    results: dict = {}
+    try:
+        with tempfile.TemporaryDirectory(prefix="muteki-shots-") as temp:
+            jobs_path = Path(temp) / "jobs.json"
+            results_path = Path(temp) / "results.jsonl"
+            jobs_path.write_text(_json.dumps(jobs), encoding="utf-8")
+            subprocess.run(
+                [node, str(script), pkg, str(jobs_path), str(results_path)],
+                capture_output=True, text=True, timeout=total_timeout_s,
+                cwd=str(HERE))
+            if results_path.is_file():
+                for line in results_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        row = _json.loads(line)
+                    except _json.JSONDecodeError:
+                        continue
+                    name = row.get("name")
+                    if name:
+                        results[name] = ("ok" if row.get("ok")
+                                         else str(row.get("detail") or "failed"))
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"<batch>": f"{type(exc).__name__}: {exc}"[:200]}
+    return results
+
+
 def _screenshot(url: str, out_png: Path, timeout_s: int) -> tuple[bool, str]:
     """Replay one GET through a headless browser. Returns (ok, detail).
 
-    Prefers the host Node Playwright (npx, with its chromium already cached);
-    falls back to the python package when importable.
+    Per-page FALLBACK for pages the batched collector (_node_batch_screenshot)
+    could not capture. Two known hazards live here: npx.cmd routes argv through
+    cmd.exe (URL query strings containing & % ^ get split/expanded), and every
+    call cold-launches a browser (back-to-back profile race). Both are why the
+    batched path is primary; this path keeps one spaced retry as mitigation.
     """
     import shutil
     import subprocess
@@ -149,13 +232,37 @@ def collect(*, run_id: str, sessions: Path, shots: int = 4,
                 encoding="utf-8")
 
         _save()
-        for i, page in enumerate(pages, 1):
-            name = f"{i:02d}-seq{page['seq']}.png"
-            ok, detail = _screenshot(page["url"], shots_dir / name, timeout_s)
+        shots_dir.mkdir(parents=True, exist_ok=True)
+        # Batch 9 (6C): one persistent node+chromium process for ALL shots.
+        # URLs travel via a JSON file — cmd.exe can no longer mangle query
+        # strings (& % ^), and no per-shot cold launch means no profile race.
+        # Per-page results land incrementally; a killed batch still yields the
+        # partial JSONL, and any page without "ok" falls back to the legacy
+        # per-page path once before being recorded as failed.
+        jobs = [
+            {"name": f"{i:02d}-seq{page['seq']}", "url": page["url"],
+             "out": str(shots_dir / f"{i:02d}-seq{page['seq']}.png"),
+             "timeout_ms": timeout_s * 1000}
+            for i, page in enumerate(pages, 1)
+        ]
+        batch = _node_batch_screenshot(
+            jobs, total_timeout_s=timeout_s * max(1, len(jobs)) + 90)
+        for job, page in zip(jobs, pages):
+            name = Path(job["out"]).name
+            detail = batch.get(job["name"])
+            ok = detail == "ok" and Path(job["out"]).is_file()
+            if not ok:
+                ok2, detail2 = _screenshot(job["url"], Path(job["out"]),
+                                           timeout_s)
+                if ok2:
+                    ok, detail = True, "ok"
+                else:
+                    detail = (f"{detail or 'batch missing'}; "
+                              f"per-page fallback: {detail2}")
             if ok:
                 manifest["screenshots"].append({
                     "file": name, "url": page["url"], "seq": page["seq"],
-                    "method": "GET replay (host playwright)",
+                    "method": "GET replay (host playwright, batched)",
                     "replay": True,
                     "captured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 })

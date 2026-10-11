@@ -1702,6 +1702,32 @@ class RunManager:
         """
         previous_generation = run.execution_generation
         generation = previous_generation + 1
+        if generation > 1:
+            # Batch 9 (6D): a relaunched generation must inherit the PRE-restart
+            # spend, otherwise USD/token ceilings only cover the post-restart
+            # tail. Rebuilt from the durable cost.update snapshots with
+            # usage_reduce v3 semantics (cumulative snapshots, never summed);
+            # reset-then-seed inside seed_history keeps repeated relaunches
+            # from double-counting. Best-effort: a failed read/reduce logs and
+            # leaves the zero ledger — a light ledger must not block relaunch.
+            try:
+                from muteki.core.usage_reduce import reduce_usage
+                usage = reduce_usage(run.store.load_all(run.run_id))
+                if (usage.input_tokens or usage.output_tokens
+                        or abs(usage.usd) > 1e-9):
+                    run.cost.seed_history(
+                        input_tokens=usage.input_tokens,
+                        output_tokens=usage.output_tokens,
+                        usd=usage.usd,
+                        solver_totals=usage.solver_totals,
+                        challenge_rollups=usage.challenge_rollups)
+                    LOG.info(
+                        "seeded continuation cost for %s: basis=%s in=%d "
+                        "out=%d usd=%.4f", run.run_id, usage.basis,
+                        usage.input_tokens, usage.output_tokens, usage.usd)
+            except Exception:
+                LOG.exception("continuation cost seeding failed for %s",
+                              run.run_id)
         if run.title_task is not None and not run.title_task.done():
             run.title_task.cancel()
         run.execution_generation = generation

@@ -31,9 +31,14 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent.parent))
 
 from eval_verdict import evaluate_attempt  # noqa: E402
+from muteki.core.events import run_level_started  # noqa: E402
 from usage_reduce import USAGE_STATS_VERSION, reduce_usage  # noqa: E402
+
+# back-compat alias — archived analyses import the helper from this module
+_run_level_started = run_level_started
 
 RUN_ID_RE = re.compile(r"run-[A-Za-z0-9_-]{1,64}")
 
@@ -51,25 +56,6 @@ def _load_events(sessions: Path, run_id: str) -> list[dict]:
         except json.JSONDecodeError:
             continue
     return events
-
-
-def _run_level_started(events: list[dict]) -> dict | None:
-    """The RUN-level started event, not the worker-level duplicate.
-
-    The coordinator emits ``run.started`` for the run (no solver_id) AND the
-    worker path reuses the same event type with ``solver_id`` set (batch-4-1:
-    such events now carry ``scope:"worker"``; older streams only distinguish
-    by solver_id). Take the first event with no solver_id, falling back to the
-    earliest of any kind for old streams.
-    """
-    started = [e for e in events
-               if (e.get("event_type") or "") == "run.started"]
-    if not started:
-        return None
-    run_level = [e for e in started
-                 if not str(e.get("solver_id") or "").strip()
-                 and (e.get("payload") or {}).get("scope") != "worker"]
-    return (run_level or started)[0]
 
 
 def _gate_solved(events: list[dict]) -> bool:

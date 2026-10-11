@@ -193,6 +193,47 @@ class CostController:
             found = self.prices.get(model.split(":", 1)[0])
         return found
 
+    def seed_history(self, *, input_tokens: int, output_tokens: int,
+                     usd: float, solver_totals: dict[str, dict],
+                     challenge_rollups: dict[str, dict]) -> None:
+        """Rebuild the ledgers from a run's durable usage history (batch 9, 6D).
+
+        CostController is in-memory per run handle, so a control-plane restart
+        followed by a resolve/auto-resume used to relaunch with a ZERO ledger —
+        USD/token ceilings then only covered the post-restart tail. The caller
+        reduces the run's durable cost.update snapshots (usage_reduce v3) and
+        hands the totals here.
+
+        Reset-then-seed, so repeated relaunches never double-count: the second
+        relaunch's history already includes everything the first seed covered.
+        ``calls`` is not reconstructable from cumulative snapshots and seeds as
+        0; Budget enforces usd/token ceilings only. Global gets the REDUCED
+        total (basis-correct, never double-counts); per-solver and
+        per-challenge ledgers get their best-available per-scope figures.
+        """
+        fresh = Ledger()
+        fresh.input_tokens = int(input_tokens)
+        fresh.output_tokens = int(output_tokens)
+        fresh.tokens = int(input_tokens) + int(output_tokens)
+        fresh.usd = float(usd)
+        self._global = fresh
+        self._by_solver = {}
+        self._by_challenge = {}
+        for identity, tot in (solver_totals or {}).items():
+            led = Ledger()
+            led.input_tokens = int(tot.get("input_tokens") or 0)
+            led.output_tokens = int(tot.get("output_tokens") or 0)
+            led.tokens = led.input_tokens + led.output_tokens
+            led.usd = float(tot.get("usd") or 0.0)
+            self._by_solver[str(identity)] = led
+        for identity, tot in (challenge_rollups or {}).items():
+            led = Ledger()
+            led.input_tokens = int(tot.get("input_tokens") or 0)
+            led.output_tokens = int(tot.get("output_tokens") or 0)
+            led.tokens = led.input_tokens + led.output_tokens
+            led.usd = float(tot.get("usd") or 0.0)
+            self._by_challenge[str(identity)] = led
+
     def price_for(self, model: str) -> ModelPrice:
         """Backwards-compatible accessor.
 
